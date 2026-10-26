@@ -11,11 +11,11 @@ if env_file.exists():
 else:
     load_dotenv(override=False)
 
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
-elif DATABASE_URL.startswith("postgresql://"):
+elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+psycopg2://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 engine = None
@@ -33,11 +33,11 @@ def seed_initial_clinicians(target_engine):
             if not row:
                 conn.execute(text("""
                     INSERT INTO users (id, email, full_name, hashed_password, role, license_number, clinic_id, is_verified, failed_login_attempts, two_factor_enabled)
-                    VALUES ('usr_farhan_master', 'farhankhalid17968@gmail.com', 'Farhan Khalid', '$2b$12$1WPxu2QMz9G9vE.iQtBbjuCYinL.zCtoighm2POWezA5tngYuQP6q', 'DENTIST', '1982740928', 'CLINIC-MAIN', 1, 0, 0)
+                    VALUES ('usr_farhan_master', 'farhankhalid17968@gmail.com', 'Farhan Khalid', '$2b$12$1WPxu2QMz9G9vE.iQtBbjuCYinL.zCtoighm2POWezA5tngYuQP6q', 'DENTIST', '1982740928', 'CLINIC-MAIN', TRUE, 0, FALSE)
                 """))
             else:
                 conn.execute(text("""
-                    UPDATE users SET is_verified = 1, failed_login_attempts = 0, locked_until = NULL, last_failed_attempt = NULL, two_factor_enabled = 0
+                    UPDATE users SET is_verified = TRUE, failed_login_attempts = 0, locked_until = NULL, last_failed_attempt = NULL, two_factor_enabled = FALSE
                     WHERE email = 'farhankhalid17968@gmail.com'
                 """))
 
@@ -46,7 +46,12 @@ def seed_initial_clinicians(target_engine):
             if not smith:
                 conn.execute(text("""
                     INSERT INTO users (id, email, full_name, hashed_password, role, license_number, clinic_id, is_verified, failed_login_attempts, two_factor_enabled)
-                    VALUES ('usr_smith_demo', 'dr.smith@smileclinic.com', 'Dr. Sarah Smith, DDS', '$2b$12$1WPxu2QMz9G9vE.iQtBbjuCYinL.zCtoighm2POWezA5tngYuQP6q', 'DENTIST', '1982740928', 'CLINIC-MAIN', 1, 0, 0)
+                    VALUES ('usr_smith_demo', 'dr.smith@smileclinic.com', 'Dr. Sarah Smith, DDS', '$2b$12$1WPxu2QMz9G9vE.iQtBbjuCYinL.zCtoighm2POWezA5tngYuQP6q', 'DENTIST', '1982740928', 'CLINIC-MAIN', TRUE, 0, FALSE)
+                """))
+            else:
+                conn.execute(text("""
+                    UPDATE users SET is_verified = TRUE, failed_login_attempts = 0, locked_until = NULL, last_failed_attempt = NULL, two_factor_enabled = FALSE
+                    WHERE email = 'dr.smith@smileclinic.com'
                 """))
             conn.commit()
     except Exception as e:
@@ -74,7 +79,7 @@ def ensure_schema_compatibility(target_engine):
                 if "remembered_device_id" not in columns:
                     conn.execute(text("ALTER TABLE users ADD COLUMN remembered_device_id VARCHAR(255)"))
                 if "two_factor_enabled" not in columns:
-                    conn.execute(text("ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT 0"))
+                    conn.execute(text("ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE"))
                 conn.commit()
 
         # Seed essential clinician records
@@ -92,13 +97,12 @@ def init_db():
             engine = test_engine
             SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
             ensure_schema_compatibility(engine)
+            print("[Database] Successfully connected to Supabase PostgreSQL.")
             return
-        except Exception:
-            # Fallback to local dev SQLite when cloud host is unreachable on local network
-            pass
+        except Exception as e:
+            print(f"[Database Warning] Database connection error: {e}")
 
-    dev_db = Path(__file__).resolve().parent / "prescription_dev.db"
-    engine = create_engine(f"sqlite:///{dev_db}", connect_args={"check_same_thread": False})
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     ensure_schema_compatibility(engine)
 
