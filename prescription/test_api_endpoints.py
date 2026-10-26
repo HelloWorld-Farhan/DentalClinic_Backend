@@ -33,9 +33,7 @@ def test_signup_verify_and_login_flow():
         "email": unique_email,
         "password": password,
         "phone": "+1 555-0192",
-        "role": "DOCTOR",
-        "license_number": "DDS-884920",
-        "clinic_id": "CLINIC-MAIN"
+        "role": "USER"
     })
     assert signup_res.status_code == 200
     data = signup_res.json()

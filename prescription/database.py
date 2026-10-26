@@ -22,41 +22,6 @@ engine = None
 SessionLocal = None
 Base = declarative_base()
 
-def seed_initial_clinicians(target_engine):
-    if not target_engine:
-        return
-    try:
-        from sqlalchemy import text
-        with target_engine.connect() as conn:
-            # 1. Master Clinician: farhankhalid17968@gmail.com (Password: Farhan@123)
-            row = conn.execute(text("SELECT id FROM users WHERE email = 'farhankhalid17968@gmail.com'")).fetchone()
-            if not row:
-                conn.execute(text("""
-                    INSERT INTO users (id, email, full_name, hashed_password, role, license_number, clinic_id, is_verified, failed_login_attempts, two_factor_enabled)
-                    VALUES ('usr_farhan_master', 'farhankhalid17968@gmail.com', 'Farhan Khalid', '$2b$12$1WPxu2QMz9G9vE.iQtBbjuCYinL.zCtoighm2POWezA5tngYuQP6q', 'DENTIST', '1982740928', 'CLINIC-MAIN', TRUE, 0, FALSE)
-                """))
-            else:
-                conn.execute(text("""
-                    UPDATE users SET is_verified = TRUE, failed_login_attempts = 0, locked_until = NULL, last_failed_attempt = NULL, two_factor_enabled = FALSE
-                    WHERE email = 'farhankhalid17968@gmail.com'
-                """))
-
-            # 2. Institutional Demo Clinician: dr.smith@smileclinic.com
-            smith = conn.execute(text("SELECT id FROM users WHERE email = 'dr.smith@smileclinic.com'")).fetchone()
-            if not smith:
-                conn.execute(text("""
-                    INSERT INTO users (id, email, full_name, hashed_password, role, license_number, clinic_id, is_verified, failed_login_attempts, two_factor_enabled)
-                    VALUES ('usr_smith_demo', 'dr.smith@smileclinic.com', 'Dr. Sarah Smith, DDS', '$2b$12$1WPxu2QMz9G9vE.iQtBbjuCYinL.zCtoighm2POWezA5tngYuQP6q', 'DENTIST', '1982740928', 'CLINIC-MAIN', TRUE, 0, FALSE)
-                """))
-            else:
-                conn.execute(text("""
-                    UPDATE users SET is_verified = TRUE, failed_login_attempts = 0, locked_until = NULL, last_failed_attempt = NULL, two_factor_enabled = FALSE
-                    WHERE email = 'dr.smith@smileclinic.com'
-                """))
-            conn.commit()
-    except Exception as e:
-        print(f"[DB Seed Notice] Seed check: {e}")
-
 def ensure_schema_compatibility(target_engine):
     if not target_engine:
         return
@@ -80,12 +45,13 @@ def ensure_schema_compatibility(target_engine):
                     conn.execute(text("ALTER TABLE users ADD COLUMN remembered_device_id VARCHAR(255)"))
                 if "two_factor_enabled" not in columns:
                     conn.execute(text("ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE"))
+                if "license_number" in columns:
+                    conn.execute(text("ALTER TABLE users DROP COLUMN license_number"))
+                if "clinic_id" in columns:
+                    conn.execute(text("ALTER TABLE users DROP COLUMN clinic_id"))
                 conn.commit()
-
-        # Seed essential clinician records
-        seed_initial_clinicians(target_engine)
     except Exception as e:
-        print(f"[DB Schema Notice] Schema check skipped: {e}")
+        print(f"[DB Schema Notice] Schema check: {e}")
 
 def init_db():
     global engine, SessionLocal

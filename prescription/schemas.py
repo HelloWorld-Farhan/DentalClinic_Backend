@@ -10,9 +10,7 @@ class SignupRequest(BaseModel):
     password: str
     phone: Optional[str] = None
     country_code: Optional[str] = None
-    role: Optional[str] = "PHARMACIST"
-    license_number: Optional[str] = None
-    clinic_id: Optional[str] = "CLINIC-MAIN"
+    role: Optional[str] = "USER"
 
     @field_validator("email")
     @classmethod

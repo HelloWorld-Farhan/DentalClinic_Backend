@@ -62,8 +62,6 @@ def create_jwt_token(user: User) -> str:
         "email": user.email,
         "role": user.role,
         "name": user.full_name,
-        "license_number": user.license_number,
-        "clinic_id": user.clinic_id,
         "exp": expire
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -125,9 +123,7 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
         existing_user.full_name = payload.full_name.strip()
         existing_user.hashed_password = hashed_pwd
         existing_user.phone = payload.phone
-        existing_user.role = payload.role or "PHARMACIST"
-        existing_user.license_number = payload.license_number
-        existing_user.clinic_id = payload.clinic_id or "CLINIC-MAIN"
+        existing_user.role = payload.role or "USER"
         user = existing_user
     else:
         user = User(
@@ -135,9 +131,7 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
             full_name=payload.full_name.strip(),
             hashed_password=hashed_pwd,
             phone=payload.phone,
-            role=payload.role or "PHARMACIST",
-            license_number=payload.license_number,
-            clinic_id=payload.clinic_id or "CLINIC-MAIN",
+            role=payload.role or "USER",
             is_verified=False
         )
         db.add(user)
@@ -235,8 +229,6 @@ def verify_otp(payload: VerifyOtpRequest, db: Session = Depends(get_db)):
             "email": user.email,
             "fullName": user.full_name,
             "role": user.role,
-            "licenseNumber": user.license_number or user.id,
-            "clinicId": user.clinic_id,
             "twoFactorEnabled": getattr(user, 'two_factor_enabled', False)
         }
     )
@@ -422,8 +414,6 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             "email": user.email,
             "fullName": user.full_name,
             "role": user.role,
-            "licenseNumber": user.license_number or user.id,
-            "clinicId": user.clinic_id,
             "twoFactorEnabled": getattr(user, 'two_factor_enabled', False)
         }
     )
@@ -489,8 +479,6 @@ def verify_login_otp(payload: VerifyLoginOtpRequest, db: Session = Depends(get_d
             "email": user.email,
             "fullName": user.full_name,
             "role": user.role,
-            "licenseNumber": user.license_number or user.id,
-            "clinicId": user.clinic_id,
             "twoFactorEnabled": getattr(user, 'two_factor_enabled', False)
         }
     )
@@ -742,8 +730,6 @@ def toggle_2fa(payload: Toggle2FaRequest, db: Session = Depends(get_db)):
             "email": user.email,
             "fullName": user.full_name,
             "role": user.role,
-            "licenseNumber": user.license_number or user.id,
-            "clinicId": user.clinic_id,
             "twoFactorEnabled": user.two_factor_enabled
         }
     )
@@ -797,9 +783,8 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
         user = User(
             email=email_clean,
             full_name=display_name,
-            role="Dentist",
+            role="USER",
             auth_provider="google",
-            clinic_id="CLINIC-MAIN",
             is_verified=True,
             two_factor_enabled=False,
             remembered_device_id=payload.device_id
@@ -819,8 +804,6 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
             "email": user.email,
             "fullName": user.full_name,
             "role": user.role,
-            "licenseNumber": user.license_number or user.id,
-            "clinicId": user.clinic_id,
             "twoFactorEnabled": getattr(user, 'two_factor_enabled', False),
             "authProvider": getattr(user, 'auth_provider', 'google')
         }
