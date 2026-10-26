@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Boolean, DateTime, Integer
+from sqlalchemy import Column, String, Boolean, DateTime, Integer, Text
 from .database import Base
 
 class User(Base):
@@ -24,7 +24,7 @@ class User(Base):
     failed_login_attempts = Column(Integer, default=0)
     locked_until = Column(DateTime, nullable=True)
     last_failed_attempt = Column(DateTime, nullable=True)
-    remembered_device_id = Column(String(255), nullable=True)
+    remembered_device_id = Column(Text, nullable=True)
     two_factor_enabled = Column(Boolean, default=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

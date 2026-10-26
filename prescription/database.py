@@ -42,7 +42,12 @@ def ensure_schema_compatibility(target_engine):
                 if "last_failed_attempt" not in columns:
                     conn.execute(text("ALTER TABLE users ADD COLUMN last_failed_attempt TIMESTAMP"))
                 if "remembered_device_id" not in columns:
-                    conn.execute(text("ALTER TABLE users ADD COLUMN remembered_device_id VARCHAR(255)"))
+                    conn.execute(text("ALTER TABLE users ADD COLUMN remembered_device_id TEXT"))
+                else:
+                    try:
+                        conn.execute(text("ALTER TABLE users ALTER COLUMN remembered_device_id TYPE TEXT"))
+                    except Exception:
+                        pass
                 if "two_factor_enabled" not in columns:
                     conn.execute(text("ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE"))
                 if "age" not in columns:

@@ -88,6 +88,37 @@ def create_jwt_token(user: User) -> str:
 def generate_numeric_otp(length: int = 6) -> str:
     return "".join(secrets.choice("0123456789") for _ in range(length))
 
+def get_user_remembered_devices(user: User) -> list[str]:
+    """Returns a list of distinct non-empty device IDs remembered for the user."""
+    raw = getattr(user, 'remembered_device_id', None) or ""
+    return [d.strip() for d in raw.split(",") if d.strip()]
+
+def is_device_remembered(user: User, device_id: Optional[str]) -> bool:
+    """Returns True if device_id is non-empty and recognized among user's remembered devices."""
+    if not device_id or not device_id.strip():
+        return False
+    return device_id.strip() in get_user_remembered_devices(user)
+
+def add_user_remembered_device(user: User, device_id: Optional[str]) -> None:
+    """Adds a device ID to user's remembered devices (stores up to 20 devices)."""
+    if not device_id or not device_id.strip():
+        return
+    clean_id = device_id.strip()
+    devices = get_user_remembered_devices(user)
+    if clean_id not in devices:
+        devices.append(clean_id)
+        if len(devices) > 20:
+            devices = devices[-20:]
+        user.remembered_device_id = ",".join(devices)
+
+def remove_user_remembered_device(user: User, device_id: Optional[str]) -> None:
+    """Removes a device ID from user's remembered devices list."""
+    if not device_id or not device_id.strip():
+        return
+    clean_id = device_id.strip()
+    devices = [d for d in get_user_remembered_devices(user) if d != clean_id]
+    user.remembered_device_id = ",".join(devices) if devices else None
+
 def send_template_email(to_email: str, subject: str, template_name: str, context: dict) -> bool:
     """Renders HTML template from templates/ and sends via Google Apps Script Mail Gateway."""
     template_file = get_template_path(template_name)
@@ -381,9 +412,15 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             detail="Your account is not verified yet. A verification code has been sent to your email."
         )
 
-    # 5. Check "Two-Factor Authentication" setting
+    # 5. Check Security Verification (2FA / Remember Device / New Device Detection)
     two_fa_active = bool(getattr(user, 'two_factor_enabled', False))
-    if two_fa_active:
+    device_recognized = is_device_remembered(user, payload.device_id)
+
+    # Mandatory OTP is triggered if:
+    # 1. 2FA is explicitly enabled on account, OR
+    # 2. "Remember me" is turned off (payload.remember_device is False), OR
+    # 3. This device is logging in for the first time (not yet in remembered list), even if remember_device is True!
+    if two_fa_active or (not payload.remember_device) or (not device_recognized):
         otp_code = generate_numeric_otp(6)
         expires_at = now + timedelta(minutes=10)
         db.query(AuthOtp).filter(AuthOtp.email == email_clean).delete()
@@ -401,16 +438,20 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             }
         )
 
+        if two_fa_active:
+            msg = "Two-factor verification required. A 6-digit sign-in code has been dispatched to your email."
+        elif not device_recognized:
+            msg = "New workstation detected. For clinical security, a 6-digit verification code has been dispatched to your email."
+        else:
+            msg = "Sign-in verification required. A 6-digit verification code has been dispatched to your email."
+
         return AuthResponse(
             status="otp_required",
-            message="Two-factor verification required. A 6-digit sign-in code has been dispatched to your email.",
+            message=msg,
             dev_otp=otp_code
         )
 
-    # If remember_device is True, direct login without OTP friction
-    if payload.device_id:
-        user.remembered_device_id = payload.device_id
-
+    # If device is recognized and remember_device is True: direct login without OTP friction
     user.failed_login_attempts = 0
     user.last_failed_attempt = None
     user.locked_until = None
@@ -467,7 +508,9 @@ def verify_login_otp(payload: VerifyLoginOtpRequest, db: Session = Depends(get_d
     db.query(AuthOtp).filter(AuthOtp.email == email_clean).delete()
 
     if payload.remember_device and payload.device_id:
-        user.remembered_device_id = payload.device_id
+        add_user_remembered_device(user, payload.device_id)
+    elif not payload.remember_device and payload.device_id:
+        remove_user_remembered_device(user, payload.device_id)
 
     user.failed_login_attempts = 0
     user.last_failed_attempt = None
@@ -742,7 +785,7 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
         user.last_failed_attempt = None
         user.locked_until = None
         if payload.device_id:
-            user.remembered_device_id = payload.device_id
+            add_user_remembered_device(user, payload.device_id)
         db.commit()
         db.refresh(user)
 
