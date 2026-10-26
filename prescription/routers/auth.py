@@ -632,7 +632,13 @@ def verify_current_password(payload: VerifyPasswordRequest, db: Session = Depend
             detail="Clinician record not found."
         )
 
-    if not user.hashed_password or not verify_password(payload.password, user.hashed_password):
+    if not user.hashed_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This clinician account was created via Google Sign-In and has no existing password. Please use the 'Email Passcode' option to set your password."
+        )
+
+    if not verify_password(payload.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect previous password. Please enter your valid current password."
@@ -654,7 +660,13 @@ def change_password(payload: ChangePasswordRequest, db: Session = Depends(get_db
             detail="Clinician record not found."
         )
 
-    if not user.hashed_password or not verify_password(payload.current_password, user.hashed_password):
+    if not user.hashed_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This clinician account was created via Google Sign-In and has no existing password. Please use the 'Email Passcode' option to set your password."
+        )
+
+    if not verify_password(payload.current_password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect previous password. Please enter your valid current password."
