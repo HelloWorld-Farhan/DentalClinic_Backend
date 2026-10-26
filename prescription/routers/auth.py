@@ -470,6 +470,7 @@ def verify_login_otp(payload: VerifyLoginOtpRequest, db: Session = Depends(get_d
     user.failed_login_attempts = 0
     user.last_failed_attempt = None
     user.locked_until = None
+    user.is_verified = True
     db.commit()
 
     token = create_jwt_token(user)
