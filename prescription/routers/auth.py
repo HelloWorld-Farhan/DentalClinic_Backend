@@ -229,7 +229,7 @@ def verify_otp(payload: VerifyOtpRequest, db: Session = Depends(get_db)):
             "email": user.email,
             "fullName": user.full_name,
             "role": user.role,
-            "licenseNumber": user.license_number,
+            "licenseNumber": user.license_number or user.id,
             "clinicId": user.clinic_id
         }
     )
@@ -415,7 +415,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             "email": user.email,
             "fullName": user.full_name,
             "role": user.role,
-            "licenseNumber": user.license_number,
+            "licenseNumber": user.license_number or user.id,
             "clinicId": user.clinic_id
         }
     )
@@ -480,7 +480,7 @@ def verify_login_otp(payload: VerifyLoginOtpRequest, db: Session = Depends(get_d
             "email": user.email,
             "fullName": user.full_name,
             "role": user.role,
-            "licenseNumber": user.license_number,
+            "licenseNumber": user.license_number or user.id,
             "clinicId": user.clinic_id
         }
     )
