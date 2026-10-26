@@ -125,6 +125,26 @@ class ChangePasswordRequest(BaseModel):
             raise ValueError("Invalid email address format.")
         return clean
 
+class UpdateProfileRequest(BaseModel):
+    email: str
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    height: Optional[str] = None
+    weight: Optional[str] = None
+    has_allergies: Optional[bool] = False
+    allergies_description: Optional[str] = None
+    profile_completed: Optional[bool] = True
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not EMAIL_REGEX.match(clean):
+            raise ValueError("Invalid email address format.")
+        return clean
+
 class AuthResponse(BaseModel):
     status: str
     message: str

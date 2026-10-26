@@ -45,6 +45,20 @@ def ensure_schema_compatibility(target_engine):
                     conn.execute(text("ALTER TABLE users ADD COLUMN remembered_device_id VARCHAR(255)"))
                 if "two_factor_enabled" not in columns:
                     conn.execute(text("ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE"))
+                if "age" not in columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN age INTEGER"))
+                if "gender" not in columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN gender VARCHAR(20)"))
+                if "height" not in columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN height VARCHAR(20)"))
+                if "weight" not in columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN weight VARCHAR(20)"))
+                if "has_allergies" not in columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN has_allergies BOOLEAN DEFAULT FALSE"))
+                if "allergies_description" not in columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN allergies_description VARCHAR(500)"))
+                if "profile_completed" not in columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN profile_completed BOOLEAN DEFAULT FALSE"))
                 if "license_number" in columns:
                     conn.execute(text("ALTER TABLE users DROP COLUMN license_number"))
                 if "clinic_id" in columns:

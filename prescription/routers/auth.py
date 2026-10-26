@@ -24,6 +24,7 @@ from ..schemas import (
     ChangePasswordRequest,
     Toggle2FaRequest,
     GoogleAuthRequest,
+    UpdateProfileRequest,
     AuthResponse
 )
 
@@ -54,6 +55,24 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
     except Exception:
         return False
+
+def user_dict(user: User) -> dict:
+    return {
+        "id": user.id,
+        "email": user.email,
+        "fullName": user.full_name,
+        "role": user.role or "USER",
+        "phone": user.phone or "",
+        "age": getattr(user, 'age', None),
+        "gender": getattr(user, 'gender', None),
+        "height": getattr(user, 'height', None),
+        "weight": getattr(user, 'weight', None),
+        "hasAllergies": getattr(user, 'has_allergies', False) or False,
+        "allergiesDescription": getattr(user, 'allergies_description', None) or "",
+        "profileCompleted": getattr(user, 'profile_completed', False) or False,
+        "twoFactorEnabled": getattr(user, 'two_factor_enabled', False) or False,
+        "authProvider": getattr(user, 'auth_provider', 'email')
+    }
 
 def create_jwt_token(user: User) -> str:
     expire = datetime.now(timezone.utc) + timedelta(days=JWT_EXPIRATION_DAYS)
@@ -224,13 +243,7 @@ def verify_otp(payload: VerifyOtpRequest, db: Session = Depends(get_db)):
         status="success",
         message="Account verified successfully! Welcome to Smile Clinic.",
         token=token,
-        user={
-            "id": user.id,
-            "email": user.email,
-            "fullName": user.full_name,
-            "role": user.role,
-            "twoFactorEnabled": getattr(user, 'two_factor_enabled', False)
-        }
+        user=user_dict(user)
     )
 
 
@@ -409,13 +422,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         status="success",
         message="Login successful.",
         token=token,
-        user={
-            "id": user.id,
-            "email": user.email,
-            "fullName": user.full_name,
-            "role": user.role,
-            "twoFactorEnabled": getattr(user, 'two_factor_enabled', False)
-        }
+        user=user_dict(user)
     )
 
 
@@ -474,13 +481,7 @@ def verify_login_otp(payload: VerifyLoginOtpRequest, db: Session = Depends(get_d
         status="success",
         message="Sign-in verified successfully! Welcome back.",
         token=token,
-        user={
-            "id": user.id,
-            "email": user.email,
-            "fullName": user.full_name,
-            "role": user.role,
-            "twoFactorEnabled": getattr(user, 'two_factor_enabled', False)
-        }
+        user=user_dict(user)
     )
 
 
@@ -725,13 +726,7 @@ def toggle_2fa(payload: Toggle2FaRequest, db: Session = Depends(get_db)):
     return AuthResponse(
         status="success",
         message=f"Two-Factor Authentication {'activated' if payload.enabled else 'deactivated'} successfully.",
-        user={
-            "id": user.id,
-            "email": user.email,
-            "fullName": user.full_name,
-            "role": user.role,
-            "twoFactorEnabled": user.two_factor_enabled
-        }
+        user=user_dict(user)
     )
 
 
@@ -799,15 +794,52 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
         status="success",
         message="Google authentication successful.",
         token=token,
-        user={
-            "id": user.id,
-            "email": user.email,
-            "fullName": user.full_name,
-            "role": user.role,
-            "twoFactorEnabled": getattr(user, 'two_factor_enabled', False),
-            "authProvider": getattr(user, 'auth_provider', 'google')
-        }
+        user=user_dict(user)
     )
+
+
+@router.post("/update-profile", response_model=AuthResponse)
+@router.put("/profile", response_model=AuthResponse)
+def update_profile(payload: UpdateProfileRequest, db: Session = Depends(get_db)):
+    email_clean = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email_clean).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User account not found."
+        )
+
+    if payload.full_name is not None and payload.full_name.strip():
+        user.full_name = payload.full_name.strip()
+    if payload.phone is not None:
+        user.phone = payload.phone.strip()
+    if payload.age is not None:
+        user.age = payload.age
+    if payload.gender is not None:
+        user.gender = payload.gender
+    if payload.height is not None:
+        user.height = payload.height
+    if payload.weight is not None:
+        user.weight = payload.weight
+    if payload.has_allergies is not None:
+        user.has_allergies = payload.has_allergies
+    if payload.allergies_description is not None:
+        user.allergies_description = payload.allergies_description
+    if payload.profile_completed is not None:
+        user.profile_completed = payload.profile_completed
+
+    db.commit()
+    db.refresh(user)
+
+    token = create_jwt_token(user)
+
+    return AuthResponse(
+        status="success",
+        message="Profile details updated successfully.",
+        token=token,
+        user=user_dict(user)
+    )
+
 
 
 
