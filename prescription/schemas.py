@@ -168,6 +168,7 @@ class RevokeSessionRequest(BaseModel):
     email: str
     device_id: Optional[str] = None
     session_id: Optional[str] = None
+    device_name: Optional[str] = None
 
 class SessionItem(BaseModel):
     id: str

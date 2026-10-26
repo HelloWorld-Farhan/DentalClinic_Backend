@@ -416,15 +416,45 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             detail="Your account is not verified yet. A verification code has been sent to your email."
         )
 
-    # 5. Check Security Verification (2FA / Remember Device / New Device Detection)
+    # 5. Check Security Verification (2FA / Remember Device / New Device Detection / Revoked Device)
     two_fa_active = bool(getattr(user, 'two_factor_enabled', False))
     device_recognized = is_device_remembered(user, payload.device_id)
+
+    # Check if this specific device was logged out / revoked from Settings
+    is_revoked_in_db = False
+    if payload.device_id:
+        dev_id_clean = payload.device_id.strip()
+        active_sess = (
+            db.query(UserSession)
+            .filter(
+                UserSession.email == email_clean,
+                UserSession.device_id == dev_id_clean,
+                UserSession.is_active == True
+            )
+            .first()
+        )
+        if not active_sess:
+            revoked_sess = (
+                db.query(UserSession)
+                .filter(
+                    UserSession.email == email_clean,
+                    UserSession.device_id == dev_id_clean,
+                    UserSession.is_active == False
+                )
+                .first()
+            )
+            if revoked_sess:
+                is_revoked_in_db = True
+                # Purge from remembered devices to ensure no stale token remains
+                remove_user_remembered_device(user, dev_id_clean)
+                db.commit()
 
     # Mandatory OTP is triggered if:
     # 1. 2FA is explicitly enabled on account, OR
     # 2. "Remember me" is turned off (payload.remember_device is False), OR
     # 3. This device is logging in for the first time (not yet in remembered list), even if remember_device is True!
-    if two_fa_active or (not payload.remember_device) or (not device_recognized):
+    # 4. This device was logged out / revoked from Settings (is_revoked_in_db is True)!
+    if two_fa_active or (not payload.remember_device) or (not device_recognized) or is_revoked_in_db:
         otp_code = generate_numeric_otp(6)
         expires_at = now + timedelta(minutes=10)
         db.query(AuthOtp).filter(AuthOtp.email == email_clean).delete()
@@ -444,6 +474,8 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 
         if two_fa_active:
             msg = "Two-factor verification required. A 6-digit sign-in code has been dispatched to your email."
+        elif is_revoked_in_db:
+            msg = "Workstation re-authorization required. A 6-digit verification code has been dispatched to your email."
         elif not device_recognized:
             msg = "New workstation detected. For clinical security, a 6-digit verification code has been dispatched to your email."
         else:
@@ -513,6 +545,16 @@ def verify_login_otp(payload: VerifyLoginOtpRequest, db: Session = Depends(get_d
 
     if payload.remember_device and payload.device_id:
         add_user_remembered_device(user, payload.device_id)
+        # Re-activate any previously revoked session for this workstation
+        prev_sessions = (
+            db.query(UserSession)
+            .filter(UserSession.email == email_clean, UserSession.device_id == payload.device_id.strip())
+            .all()
+        )
+        for s in prev_sessions:
+            s.is_active = True
+            s.status = "Success"
+            s.last_active = now
     elif not payload.remember_device and payload.device_id:
         remove_user_remembered_device(user, payload.device_id)
 
@@ -1061,7 +1103,7 @@ def revoke_session(payload: RevokeSessionRequest, db: Session = Depends(get_db))
     revoked_count = 0
     target_device_id = payload.device_id.strip() if payload.device_id else None
 
-    # Revoke by session ID if provided
+    # 1. Revoke by session ID if provided
     if payload.session_id:
         sess_query = db.query(UserSession).filter(
             UserSession.email == email_clean,
@@ -1074,10 +1116,11 @@ def revoke_session(payload: RevokeSessionRequest, db: Session = Depends(get_db))
             s.last_active = now
             if not target_device_id:
                 target_device_id = s.device_id
-            remove_user_remembered_device(user, s.device_id)
+            if s.device_id:
+                remove_user_remembered_device(user, s.device_id)
             revoked_count += 1
 
-    # Revoke by device ID if provided
+    # 2. Revoke by device ID if provided
     if target_device_id:
         dev_sessions = (
             db.query(UserSession)
@@ -1090,6 +1133,43 @@ def revoke_session(payload: RevokeSessionRequest, db: Session = Depends(get_db))
             s.last_active = now
             revoked_count += 1
         remove_user_remembered_device(user, target_device_id)
+
+        # If this device had no rows in DB yet, create a revoked entry to force OTP re-challenge on next login
+        if not dev_sessions:
+            placeholder_sess = UserSession(
+                email=email_clean,
+                device_id=target_device_id,
+                device_name=payload.device_name or "Remote Terminal",
+                browser_os="Terminated Session",
+                status="Revoked",
+                is_active=False,
+                details="Session terminated from Security Settings",
+                created_at=now,
+                last_active=now
+            )
+            db.add(placeholder_sess)
+            revoked_count += 1
+
+    # 3. Revoke by device name if provided and no session matched yet
+    if payload.device_name and revoked_count == 0:
+        name_clean = payload.device_name.strip()
+        named_sessions = (
+            db.query(UserSession)
+            .filter(
+                UserSession.email == email_clean,
+                UserSession.device_name.ilike(f"%{name_clean}%")
+            )
+            .all()
+        )
+        for s in named_sessions:
+            s.is_active = False
+            s.status = "Revoked"
+            s.last_active = now
+            if s.device_id:
+                remove_user_remembered_device(user, s.device_id)
+                if not target_device_id:
+                    target_device_id = s.device_id
+            revoked_count += 1
 
     db.commit()
 
