@@ -130,7 +130,53 @@ def test_brute_force_lockout_and_password_reset(email: str, original_password: s
     db.close()
     print("--- ALL BRUTE FORCE & LOCKOUT TESTS PASSED ---")
 
+def test_remember_device_flows(email: str, password: str):
+    print(f"\n--- TESTING REMEMBER DEVICE FLOWS FOR: {email} ---")
+    
+    # 1. Login with remember_device=True (Default) -> Direct login, no OTP required
+    print("1. Testing login with remember_device=True...")
+    res_remembered = client.post("/api/v1/auth/login", json={
+        "email": email,
+        "password": password,
+        "remember_device": True,
+        "device_id": "test_trusted_device_01"
+    })
+    print("Remembered Device Login Status:", res_remembered.status_code, res_remembered.json())
+    assert res_remembered.status_code == 200
+    assert res_remembered.json()["status"] == "success"
+    assert res_remembered.json()["token"] is not None
+    print("[PASS] Remember Device=True allows direct access without OTP.")
+
+    # 2. Login with remember_device=False -> Requires 2FA OTP verification
+    print("2. Testing login with remember_device=False...")
+    res_unremembered = client.post("/api/v1/auth/login", json={
+        "email": email,
+        "password": password,
+        "remember_device": False,
+        "device_id": "test_guest_device_02"
+    })
+    print("Unremembered Device Login Status:", res_unremembered.status_code, res_unremembered.json())
+    assert res_unremembered.status_code == 200
+    assert res_unremembered.json()["status"] == "otp_required"
+    login_otp = res_unremembered.json().get("dev_otp")
+    assert login_otp and len(login_otp) == 6
+    print(f"[PASS] Remember Device=False triggers OTP requirement. OTP: {login_otp}")
+
+    # 3. Complete login with verify-login-otp
+    print("3. Testing verify-login-otp endpoint...")
+    verify_login_res = client.post("/api/v1/auth/verify-login-otp", json={
+        "email": email,
+        "otp_code": login_otp,
+        "remember_device": False
+    })
+    print("Verify Login OTP Status:", verify_login_res.status_code, verify_login_res.json())
+    assert verify_login_res.status_code == 200
+    assert verify_login_res.json()["status"] == "success"
+    assert verify_login_res.json()["token"] is not None
+    print("[PASS] verify-login-otp successfully returns session JWT!")
+
 if __name__ == "__main__":
     test_health_check()
     email, password = test_signup_verify_and_login_flow()
+    test_remember_device_flows(email, password)
     test_brute_force_lockout_and_password_reset(email, password)

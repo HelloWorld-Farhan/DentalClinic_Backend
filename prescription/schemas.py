@@ -32,6 +32,14 @@ class ResendOtpRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+    remember_device: Optional[bool] = True
+    device_id: Optional[str] = None
+
+class VerifyLoginOtpRequest(BaseModel):
+    email: str
+    otp_code: str
+    remember_device: Optional[bool] = False
+    device_id: Optional[str] = None
 
 class ForgotPasswordRequest(BaseModel):
     email: str

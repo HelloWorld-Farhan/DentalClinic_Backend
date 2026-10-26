@@ -37,6 +37,8 @@ def ensure_schema_compatibility(target_engine):
                     conn.execute(text("ALTER TABLE users ADD COLUMN locked_until TIMESTAMP"))
                 if "last_failed_attempt" not in columns:
                     conn.execute(text("ALTER TABLE users ADD COLUMN last_failed_attempt TIMESTAMP"))
+                if "remembered_device_id" not in columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN remembered_device_id VARCHAR(255)"))
                 conn.commit()
     except Exception as e:
         print(f"[DB Schema Notice] Schema check skipped: {e}")

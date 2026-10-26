@@ -16,6 +16,7 @@ from ..schemas import (
     VerifyOtpRequest,
     ResendOtpRequest,
     LoginRequest,
+    VerifyLoginOtpRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
     AuthResponse
@@ -368,7 +369,36 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             detail="Your account is not verified yet. A verification code has been sent to your email."
         )
 
-    # 5. Successful login: reset attempts and locks
+    # 5. Check "Remember this device" setting
+    # If remember_device is False, enforce 2FA OTP verification for this sign-in session
+    if payload.remember_device is False:
+        otp_code = generate_numeric_otp(6)
+        expires_at = now + timedelta(minutes=10)
+        db.query(AuthOtp).filter(AuthOtp.email == email_clean).delete()
+        db.add(AuthOtp(email=email_clean, otp_code=otp_code, expires_at=expires_at))
+        db.commit()
+
+        send_template_email(
+            to_email=email_clean,
+            subject=f"Smile Clinic — Sign-In Verification Code: {otp_code}",
+            template_name="otp_verification.html",
+            context={
+                "clinician_name": user.full_name,
+                "otp_code": otp_code,
+                "expires_in_minutes": 10
+            }
+        )
+
+        return AuthResponse(
+            status="otp_required",
+            message="Two-factor verification required. A 6-digit sign-in code has been dispatched to your email.",
+            dev_otp=otp_code
+        )
+
+    # If remember_device is True, direct login without OTP friction
+    if payload.device_id:
+        user.remembered_device_id = payload.device_id
+
     user.failed_login_attempts = 0
     user.last_failed_attempt = None
     user.locked_until = None
@@ -379,6 +409,71 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     return AuthResponse(
         status="success",
         message="Login successful.",
+        token=token,
+        user={
+            "id": user.id,
+            "email": user.email,
+            "fullName": user.full_name,
+            "role": user.role,
+            "licenseNumber": user.license_number,
+            "clinicId": user.clinic_id
+        }
+    )
+
+
+@router.post("/verify-login-otp", response_model=AuthResponse)
+def verify_login_otp(payload: VerifyLoginOtpRequest, db: Session = Depends(get_db)):
+    email_clean = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email_clean).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No clinician account found for this email address."
+        )
+
+    now = datetime.now(timezone.utc)
+    if (user.failed_login_attempts or 0) >= 3 or (user.locked_until and user.locked_until > now):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is locked due to previous failed attempts. Please complete the password reset flow."
+        )
+
+    otp_record = (
+        db.query(AuthOtp)
+        .filter(AuthOtp.email == email_clean)
+        .order_by(AuthOtp.created_at.desc())
+        .first()
+    )
+
+    if not otp_record or otp_record.otp_code != payload.otp_code.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid 6-digit sign-in code. Please check the code sent to your email."
+        )
+
+    record_exp = otp_record.expires_at.replace(tzinfo=timezone.utc) if otp_record.expires_at.tzinfo is None else otp_record.expires_at
+    if record_exp < now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Sign-in code has expired. Please log in again to request a fresh code."
+        )
+
+    # Clean up OTP
+    db.query(AuthOtp).filter(AuthOtp.email == email_clean).delete()
+
+    if payload.remember_device and payload.device_id:
+        user.remembered_device_id = payload.device_id
+
+    user.failed_login_attempts = 0
+    user.last_failed_attempt = None
+    user.locked_until = None
+    db.commit()
+
+    token = create_jwt_token(user)
+
+    return AuthResponse(
+        status="success",
+        message="Sign-in verified successfully! Welcome back.",
         token=token,
         user={
             "id": user.id,
