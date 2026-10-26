@@ -579,6 +579,20 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
     db.query(AuthOtp).filter(AuthOtp.email == email_clean).delete()
     db.commit()
 
+    # Dispatch security notification email confirming password update
+    change_time_str = datetime.now(timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC")
+    send_template_email(
+        to_email=email_clean,
+        subject="Smile Clinic Security Alert — Your Clinical Password Was Changed",
+        template_name="password_changed_notification.html",
+        context={
+            "clinician_name": user.full_name or "Authorized Prescriber",
+            "clinician_email": user.email,
+            "change_time": change_time_str,
+            "portal_login_url": PORTAL_LOGIN_URL
+        }
+    )
+
     return AuthResponse(
         status="success",
         message="Password reset successfully! You can now sign in with your new password."
@@ -684,6 +698,20 @@ def change_password(payload: ChangePasswordRequest, db: Session = Depends(get_db
     user.locked_until = None
     user.is_verified = True
     db.commit()
+
+    # Dispatch security notification email confirming password update
+    change_time_str = datetime.now(timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC")
+    send_template_email(
+        to_email=email_clean,
+        subject="Smile Clinic Security Alert — Your Clinical Password Was Changed",
+        template_name="password_changed_notification.html",
+        context={
+            "clinician_name": user.full_name or "Authorized Prescriber",
+            "clinician_email": user.email,
+            "change_time": change_time_str,
+            "portal_login_url": PORTAL_LOGIN_URL
+        }
+    )
 
     return AuthResponse(
         status="success",
