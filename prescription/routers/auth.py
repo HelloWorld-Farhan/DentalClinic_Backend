@@ -33,7 +33,8 @@ JWT_SECRET = os.getenv("JWT_SECRET", "smileclinic_jwt_secret_dev_key_2026_super_
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_DAYS = 7
 GOOGLE_APPS_SCRIPT_URL = os.getenv("GOOGLE_APPS_SCRIPT_URL")
-PORTAL_LOGIN_URL = os.getenv("PORTAL_LOGIN_URL", os.getenv("FRONTEND_URL", "http://localhost:5173/login"))
+frontend_env = os.getenv("FRONTEND_URL")
+PORTAL_LOGIN_URL = os.getenv("PORTAL_LOGIN_URL") or (f"{frontend_env.rstrip('/')}/login" if frontend_env else "http://localhost:5173/login")
 
 def get_template_path(template_name: str) -> Optional[Path]:
     """Finds templates/ in project hierarchy dynamically without hardcoded paths."""
