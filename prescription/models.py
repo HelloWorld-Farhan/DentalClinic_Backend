@@ -37,3 +37,19 @@ class AuthOtp(Base):
     otp_code = Column(String(6), nullable=False)
     expires_at = Column(DateTime, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = Column(String(255), index=True, nullable=False)
+    device_id = Column(String(255), index=True, nullable=False)
+    device_name = Column(String(255), nullable=False)
+    browser_os = Column(String(255), nullable=False)
+    ip_address = Column(String(100), nullable=True)
+    location = Column(String(255), nullable=True)
+    status = Column(String(50), default="Success")
+    is_active = Column(Boolean, default=True)
+    details = Column(String(500), nullable=True)
+    last_active = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

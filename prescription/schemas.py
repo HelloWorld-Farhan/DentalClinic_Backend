@@ -1,5 +1,5 @@
 import re
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, field_validator
 
 EMAIL_REGEX = re.compile(r"^[\w\.-]+@[\w\.-]+\.\w+$")
@@ -153,3 +153,38 @@ class AuthResponse(BaseModel):
     dev_otp: Optional[str] = None
     attempts_remaining: Optional[int] = None
     is_locked: Optional[bool] = None
+
+class RecordSessionRequest(BaseModel):
+    email: str
+    device_id: str
+    device_name: str
+    browser_os: str
+    ip_address: Optional[str] = None
+    location: Optional[str] = None
+    status: Optional[str] = "Success"
+    details: Optional[str] = None
+
+class RevokeSessionRequest(BaseModel):
+    email: str
+    device_id: Optional[str] = None
+    session_id: Optional[str] = None
+
+class SessionItem(BaseModel):
+    id: str
+    email: str
+    device_id: str
+    device_name: str
+    browser_os: str
+    ip_address: Optional[str] = None
+    location: Optional[str] = None
+    status: str
+    is_active: bool
+    is_current: bool = False
+    details: Optional[str] = None
+    created_at: str
+    last_active: str
+
+class SessionListResponse(BaseModel):
+    status: str
+    sessions: List[SessionItem]
+    history: List[SessionItem]
