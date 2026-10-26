@@ -22,6 +22,25 @@ engine = None
 SessionLocal = None
 Base = declarative_base()
 
+def ensure_schema_compatibility(target_engine):
+    if not target_engine:
+        return
+    try:
+        from sqlalchemy import text, inspect
+        inspector = inspect(target_engine)
+        if "users" in inspector.get_table_names():
+            columns = [c["name"] for c in inspector.get_columns("users")]
+            with target_engine.connect() as conn:
+                if "failed_login_attempts" not in columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER DEFAULT 0"))
+                if "locked_until" not in columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN locked_until TIMESTAMP"))
+                if "last_failed_attempt" not in columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN last_failed_attempt TIMESTAMP"))
+                conn.commit()
+    except Exception as e:
+        print(f"[DB Schema Notice] Schema check skipped: {e}")
+
 def init_db():
     global engine, SessionLocal
     if DATABASE_URL:
@@ -31,6 +50,7 @@ def init_db():
                 pass
             engine = test_engine
             SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+            ensure_schema_compatibility(engine)
             return
         except Exception:
             # Fallback to local dev SQLite when cloud host is unreachable on local network
@@ -39,6 +59,7 @@ def init_db():
     dev_db = Path(__file__).resolve().parent / "prescription_dev.db"
     engine = create_engine(f"sqlite:///{dev_db}", connect_args={"check_same_thread": False})
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    ensure_schema_compatibility(engine)
 
 init_db()
 

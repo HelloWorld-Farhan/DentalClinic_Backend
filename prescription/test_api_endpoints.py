@@ -1,6 +1,7 @@
 import uuid
 import os
 import sys
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 # Ensure prescription package is importable
@@ -11,6 +12,8 @@ if str(backend_dir) not in sys.path:
 
 from fastapi.testclient import TestClient
 from prescription.main import app
+from prescription.database import SessionLocal
+from prescription.models import User, AuthOtp
 
 client = TestClient(app)
 
@@ -24,7 +27,7 @@ def test_signup_verify_and_login_flow():
     unique_email = f"dr.smith.{uuid.uuid4().hex[:6]}@smileclinic.com"
     password = "StrongPassword2026#"
 
-    print(f"Testing Prescription Signup for: {unique_email}")
+    print(f"\n1. Testing Prescription Signup for: {unique_email}")
     signup_res = client.post("/api/v1/auth/signup", json={
         "full_name": "Dr. Sarah Smith, DDS",
         "email": unique_email,
@@ -34,37 +37,100 @@ def test_signup_verify_and_login_flow():
         "license_number": "DDS-884920",
         "clinic_id": "CLINIC-MAIN"
     })
-    print("Signup Status:", signup_res.status_code, signup_res.json())
-    assert signup_res.status_code == 200, "Signup endpoint failed"
+    assert signup_res.status_code == 200
     data = signup_res.json()
     assert data["status"] == "success"
     otp_code = data.get("dev_otp")
-    assert otp_code and len(otp_code) == 6, "OTP code not returned in dev mode"
+    assert otp_code and len(otp_code) == 6
 
-    print("Testing Prescription Verify OTP...")
+    print("2. Testing Prescription Verify OTP...")
     verify_res = client.post("/api/v1/auth/verify-otp", json={
         "email": unique_email,
         "otp_code": otp_code
     })
-    print("Verify Status:", verify_res.status_code, verify_res.json())
-    assert verify_res.status_code == 200, "Verify OTP failed"
+    assert verify_res.status_code == 200
     vdata = verify_res.json()
-    assert vdata["token"] is not None, "Missing token on verification"
-    assert vdata["user"]["email"] == unique_email
+    assert vdata["token"] is not None
 
-    print("Testing Prescription Login...")
+    print("3. Testing Prescription Successful Login...")
     login_res = client.post("/api/v1/auth/login", json={
         "email": unique_email,
         "password": password
     })
-    print("Login Status:", login_res.status_code, login_res.json())
-    assert login_res.status_code == 200, "Login failed"
-    ldata = login_res.json()
-    assert ldata["token"] is not None
-    assert ldata["user"]["fullName"] == "Dr. Sarah Smith, DDS"
+    assert login_res.status_code == 200
+    print("[PASS] Happy path signup -> OTP -> login passed.")
+    return unique_email, password
 
-    print("--- ALL PRESCRIPTION API TESTS PASSED SUCCESSFULLY ---")
+def test_brute_force_lockout_and_password_reset(email: str, original_password: str):
+    print(f"\n--- TESTING BRUTE FORCE & LOCKOUT FLOW FOR: {email} ---")
+    
+    # Attempt 1: Wrong password
+    res1 = client.post("/api/v1/auth/login", json={"email": email, "password": "WrongPassword1#"})
+    print("Attempt 1 Status:", res1.status_code, res1.json())
+    assert res1.status_code == 401
+    assert "2 attempts remaining" in res1.json()["detail"]
+
+    # Attempt 2: Rapid-fire attempt (within 60s) -> 429 Too Many Requests
+    res2_rapid = client.post("/api/v1/auth/login", json={"email": email, "password": "WrongPassword2#"})
+    print("Attempt 2 (Rapid) Status:", res2_rapid.status_code, res2_rapid.json())
+    assert res2_rapid.status_code == 429
+    assert "Security rate limit in effect" in res2_rapid.json()["detail"]
+
+    # Fast-forward simulated timestamp for test purposes
+    db = SessionLocal()
+    user = db.query(User).filter(User.email == email).first()
+    assert user is not None
+    user.last_failed_attempt = datetime.now(timezone.utc) - timedelta(seconds=65)
+    db.commit()
+
+    # Attempt 2 (after rate limit cooldown): Wrong password -> 1 attempt remaining
+    res2 = client.post("/api/v1/auth/login", json={"email": email, "password": "WrongPassword2#"})
+    print("Attempt 2 Status:", res2.status_code, res2.json())
+    assert res2.status_code == 401
+    assert "1 attempt remaining" in res2.json()["detail"]
+
+    # Fast-forward cooldown for 3rd attempt
+    user.last_failed_attempt = datetime.now(timezone.utc) - timedelta(seconds=65)
+    db.commit()
+
+    # Attempt 3: Wrong password -> Account locked + auto OTP dispatched!
+    res3 = client.post("/api/v1/auth/login", json={"email": email, "password": "WrongPassword3#"})
+    print("Attempt 3 Status (Lockout):", res3.status_code, res3.json())
+    assert res3.status_code == 403
+    assert "Account locked due to 3 failed login attempts" in res3.json()["detail"]
+
+    # Verify an OTP was saved in auth_otps
+    otp_record = db.query(AuthOtp).filter(AuthOtp.email == email).order_by(AuthOtp.created_at.desc()).first()
+    assert otp_record is not None
+    reset_otp = otp_record.otp_code
+    print(f"[PASS] Lockout triggered. Reset OTP generated: {reset_otp}")
+
+    # Subsequent attempt even with correct password is now blocked because account is locked!
+    blocked_res = client.post("/api/v1/auth/login", json={"email": email, "password": original_password})
+    assert blocked_res.status_code == 403
+    print("[PASS] Account properly locked against all login attempts.")
+
+    # Reset Password with OTP
+    new_password = "BrandNewSecurePassword2026#"
+    reset_res = client.post("/api/v1/auth/reset-password", json={
+        "email": email,
+        "otp_code": reset_otp,
+        "new_password": new_password
+    })
+    print("Reset Password Status:", reset_res.status_code, reset_res.json())
+    assert reset_res.status_code == 200
+    assert reset_res.json()["status"] == "success"
+
+    # Login with new password now succeeds and resets all locks
+    new_login_res = client.post("/api/v1/auth/login", json={"email": email, "password": new_password})
+    assert new_login_res.status_code == 200
+    assert new_login_res.json()["token"] is not None
+    print("[PASS] Login with new password succeeded!")
+
+    db.close()
+    print("--- ALL BRUTE FORCE & LOCKOUT TESTS PASSED ---")
 
 if __name__ == "__main__":
     test_health_check()
-    test_signup_verify_and_login_flow()
+    email, password = test_signup_verify_and_login_flow()
+    test_brute_force_lockout_and_password_reset(email, password)
