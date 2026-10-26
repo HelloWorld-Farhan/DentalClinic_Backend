@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smile Clinic — Account Verification Code</title>
+  <style>
+    @keyframes pulseGlow {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(0, 119, 130, 0.25);
+        border-color: #007782;
+      }
+      50% {
+        box-shadow: 0 0 0 8px rgba(0, 119, 130, 0.08);
+        border-color: #005c65;
+      }
+    }
+    .otp-card {
+      animation: pulseGlow 3s infinite ease-in-out;
+    }
+    @media only screen and (max-width: 600px) {
+      .email-container {
+        width: 100% !important;
+        padding: 12px !important;
+      }
+      .header-cell {
+        padding: 20px 20px !important;
+      }
+      .content-cell {
+        padding: 24px 20px !important;
+      }
+      .otp-digit {
+        font-size: 28px !important;
+        letter-spacing: 6px !important;
+      }
+      .badge-cell {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #181c1e;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f1f5f9; padding: 40px 10px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card -->
+        <table role="presentation" class="email-container" width="580" cellspacing="0" cellpadding="0" border="0" style="max-width: 580px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 92, 101, 0.08), 0 8px 10px -6px rgba(0, 92, 101, 0.04); border: 1px solid #e2e8f0;">
+          
+          <!-- Top Brand Accent Bar -->
+          <tr>
+            <td style="height: 4px; background: linear-gradient(90deg, #005c65 0%, #007782 50%, #1960a3 100%); line-height: 4px; font-size: 4px;">&nbsp;</td>
+          </tr>
+
+          <!-- Modern Refined Brand Header -->
+          <tr>
+            <td class="header-cell" style="padding: 26px 36px; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td width="46" valign="middle">
+                    <div style="width: 44px; height: 44px; background-color: #e6f6f8; border: 1px solid #b2e7ed; border-radius: 12px; text-align: center; line-height: 44px;">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-top: 9px;">
+                        <path d="M12 2C7.5 2 4 5 4 8.5C4 11.5 5.5 13.5 6.5 15.5C7.5 17.5 8 21 10 21C11 21 11.5 19.5 12 18C12.5 19.5 13 21 14 21C16 21 16.5 17.5 17.5 15.5C18.5 13.5 20 11.5 20 8.5C20 5 16.5 2 12 2Z" fill="#005c65" fill-opacity="0.12" stroke="#005c65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9 9.5H15M12 6.5V12.5" stroke="#005c65" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </div>
+                  </td>
+                  <td style="padding-left: 14px;" valign="middle">
+                    <span style="font-size: 19px; font-weight: 800; color: #005c65; letter-spacing: -0.3px; display: block; line-height: 1.2;">Smile Clinic</span>
+                    <span style="font-size: 11px; font-weight: 600; color: #007782; text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-top: 2px;">RxGuard · Clinical Prescription Portal</span>
+                  </td>
+                  <td align="right" valign="middle" class="badge-cell">
+                    <span style="display: inline-block; background-color: #f0fdfa; color: #0f766e; border: 1px solid #ccfbf1; font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
+                      Verification
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td class="content-cell" style="padding: 36px 36px 28px 36px;">
+              <h2 style="margin: 0 0 12px 0; font-size: 20px; font-weight: 700; color: #0f172a; letter-spacing: -0.2px;">Verify Your Clinical Account</h2>
+              <p style="margin: 0 0 18px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+                Hello <strong>{{ clinician_name }}</strong>,
+              </p>
+              <p style="margin: 0 0 28px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+                Thank you for registering with the <strong>Smile Clinic RxGuard</strong> clinical decision support platform. To authenticate your medical credentials and activate your prescription dashboard, enter the 6-digit one-time passcode below:
+              </p>
+
+              <!-- OTP Animated Box -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin: 0 0 28px 0;">
+                <tr>
+                  <td align="center">
+                    <div class="otp-card" style="display: inline-block; background: #f0fdfa; border: 2px dashed #007782; border-radius: 14px; padding: 20px 36px; text-align: center; min-width: 260px;">
+                      <span style="display: block; font-size: 11px; text-transform: uppercase; font-weight: 700; color: #005c65; letter-spacing: 1.2px; margin-bottom: 6px;">One-Time Passcode</span>
+                      <span class="otp-digit" style="display: block; font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 800; color: #005c65; letter-spacing: 10px;">{{ otp_code }}</span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Expiry Alert -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 10px; padding: 14px 16px; margin-bottom: 24px;">
+                <tr>
+                  <td width="24" valign="top" style="font-size: 16px; line-height: 1;">⏱️</td>
+                  <td style="padding-left: 10px; font-size: 13px; color: #92400e; line-height: 1.5;">
+                    This passcode will securely expire in <strong>{{ expires_in_minutes }} minutes</strong>. For HIPAA and clinical compliance, never share this code.
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 0 0 24px 0; font-size: 13px; line-height: 1.6; color: #64748b;">
+                If you did not request this registration, no action is needed and your medical credentials remain secure.
+              </p>
+
+              <!-- Direct Support Box -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px;">
+                <tr>
+                  <td width="24" valign="top" style="font-size: 18px; line-height: 1;">💬</td>
+                  <td style="padding-left: 10px;">
+                    <p style="margin: 0; font-size: 12px; color: #475569; line-height: 1.5;">
+                      <strong>Need technical or clinical support?</strong><br>
+                      Our IT and Compliance desk is available 24/7 at:
+                      <a href="mailto:support.smileclinic@gmail.com" style="color: #005c65; text-decoration: none; font-weight: 700;">support.smileclinic@gmail.com</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 22px 36px; text-align: center;">
+              <p style="margin: 0 0 6px 0; font-size: 12px; font-weight: 600; color: #475569;">
+                Smile Clinic RxGuard Healthcare Network
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #94a3b8; line-height: 1.4;">
+                HIPAA / HITECH Compliant Medical Decision Support Engine<br>
+                For inquiries: <a href="mailto:support.smileclinic@gmail.com" style="color: #007782; text-decoration: underline;">support.smileclinic@gmail.com</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

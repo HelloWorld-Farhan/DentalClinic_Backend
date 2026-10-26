@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smile Clinic — Prescription Dispense Authorization & Clinical Copy</title>
+  <style>
+    @keyframes greenGlow {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.3);
+      }
+      50% {
+        box-shadow: 0 0 0 8px rgba(5, 150, 105, 0.08);
+      }
+    }
+    .status-badge {
+      animation: greenGlow 3s infinite ease-in-out;
+    }
+    @media only screen and (max-width: 600px) {
+      .email-container {
+        width: 100% !important;
+        padding: 12px !important;
+      }
+      .header-cell {
+        padding: 20px 20px !important;
+      }
+      .content-cell {
+        padding: 24px 20px !important;
+      }
+      .summary-cell {
+        display: block !important;
+        width: 100% !important;
+      }
+      .badge-cell {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #181c1e;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f1f5f9; padding: 40px 10px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card -->
+        <table role="presentation" class="email-container" width="580" cellspacing="0" cellpadding="0" border="0" style="max-width: 580px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 92, 101, 0.08), 0 8px 10px -6px rgba(0, 92, 101, 0.04); border: 1px solid #e2e8f0;">
+          
+          <!-- Top Brand Accent Bar -->
+          <tr>
+            <td style="height: 4px; background: linear-gradient(90deg, #059669 0%, #10b981 50%, #005c65 100%); line-height: 4px; font-size: 4px;">&nbsp;</td>
+          </tr>
+
+          <!-- Modern Refined Brand Header -->
+          <tr>
+            <td class="header-cell" style="padding: 26px 36px; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td width="46" valign="middle">
+                    <div style="width: 44px; height: 44px; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; text-align: center; line-height: 44px;">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-top: 10px;">
+                        <path d="M10.5 13.5L13.5 10.5M16.5 7.5L13.5 4.5C11.5 2.5 8.5 2.5 6.5 4.5C4.5 6.5 4.5 9.5 6.5 11.5L9.5 14.5M13.5 10.5L16.5 13.5C18.5 15.5 18.5 18.5 16.5 20.5C14.5 22.5 11.5 22.5 9.5 20.5L6.5 17.5" stroke="#059669" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                    </div>
+                  </td>
+                  <td style="padding-left: 14px;" valign="middle">
+                    <span style="font-size: 19px; font-weight: 800; color: #005c65; letter-spacing: -0.3px; display: block; line-height: 1.2;">Smile Clinic</span>
+                    <span style="font-size: 11px; font-weight: 600; color: #059669; text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-top: 2px;">RxGuard · Dispense Authorization</span>
+                  </td>
+                  <td align="right" valign="middle" class="badge-cell">
+                    <span class="status-badge" style="display: inline-block; background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
+                      Safe to Dispense
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td class="content-cell" style="padding: 36px 36px 28px 36px;">
+              <h2 style="margin: 0 0 12px 0; font-size: 20px; font-weight: 700; color: #0f172a; letter-spacing: -0.2px;">Prescription Cleared for Dispensing</h2>
+              <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+                Hello <strong>{{ recipient_name }}</strong>,
+              </p>
+              <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+                The prescription order below has undergone automated clinical decision support screening (drug interactions, beta-lactam allergy cross-sensitivities, organ clearance limits) and has been <strong>cleared for dispensing</strong>.
+              </p>
+
+              <!-- Prescription Summary Box -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 24px; overflow: hidden;">
+                <tr style="background-color: #f1f5f9; border-bottom: 1px solid #e2e8f0;">
+                  <td colspan="2" style="padding: 12px 18px; font-size: 11px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Prescription Order Summary #{{ rx_number }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class="summary-cell" style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0;">
+                    <span style="font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase;">Patient Name</span><br>
+                    <strong style="font-size: 14px; color: #0f172a;">{{ patient_name }} (MRN: {{ patient_mrn }})</strong>
+                  </td>
+                  <td class="summary-cell" style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0;">
+                    <span style="font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase;">Authorized Prescriber</span><br>
+                    <strong style="font-size: 14px; color: #0f172a;">{{ doctor_name }} (NPI: {{ doctor_npi }})</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td colspan="2" style="padding: 14px 18px; background-color: #ffffff;">
+                    <span style="font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase;">Prescribed Regimen & Instructions</span><br>
+                    <strong style="font-size: 15px; color: #005c65;">{{ medication_details }}</strong><br>
+                    <span style="font-size: 13px; color: #334155; margin-top: 4px; display: inline-block;">Sig: {{ directions_sig }}</span>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Safety Verification Attestation -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 14px 16px; margin-bottom: 26px;">
+                <tr>
+                  <td width="26" valign="top" style="font-size: 18px; line-height: 1;">🛡️</td>
+                  <td style="padding-left: 10px; font-size: 12px; color: #065f46; line-height: 1.5;">
+                    <strong>Clinical Safety Attestation:</strong> Evaluated against 1,200+ dental interaction rules. Zero contraindications detected. Verification Hash: <code>{{ verification_hash }}</code>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Support Section -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px;">
+                <tr>
+                  <td width="24" valign="top" style="font-size: 18px; line-height: 1;">💬</td>
+                  <td style="padding-left: 10px;">
+                    <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.5;">
+                      <strong>Pharmacy or Prescriber Inquiries?</strong><br>
+                      For clinical clarifications, dosage adjustments, or support, reach out directly to:
+                      <a href="mailto:support.smileclinic@gmail.com" style="color: #005c65; font-weight: 700; text-decoration: underline;">support.smileclinic@gmail.com</a>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 22px 36px; text-align: center;">
+              <p style="margin: 0 0 6px 0; font-size: 12px; font-weight: 600; color: #475569;">
+                Smile Clinic RxGuard Healthcare Network
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #94a3b8; line-height: 1.4;">
+                This dispense copy was generated for verified electronic health records.<br>
+                Direct Support: <a href="mailto:support.smileclinic@gmail.com" style="color: #007782; text-decoration: underline;">support.smileclinic@gmail.com</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

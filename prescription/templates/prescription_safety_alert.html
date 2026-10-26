@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smile Clinic RxGuard — High-Severity Interaction Alert</title>
+  <style>
+    @keyframes alertBadgePulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(194, 65, 12, 0.4);
+      }
+      50% {
+        box-shadow: 0 0 0 8px rgba(194, 65, 12, 0.1);
+      }
+    }
+    .alert-pill {
+      animation: alertBadgePulse 2.5s infinite ease-in-out;
+    }
+    @media only screen and (max-width: 600px) {
+      .email-container {
+        width: 100% !important;
+        padding: 12px !important;
+      }
+      .header-cell {
+        padding: 20px 20px !important;
+      }
+      .content-cell {
+        padding: 24px 20px !important;
+      }
+      .drug-pair-cell {
+        display: block !important;
+        width: 100% !important;
+      }
+      .badge-cell {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #181c1e;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f1f5f9; padding: 40px 10px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card -->
+        <table role="presentation" class="email-container" width="580" cellspacing="0" cellpadding="0" border="0" style="max-width: 580px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 92, 101, 0.08), 0 8px 10px -6px rgba(0, 92, 101, 0.04); border: 1px solid #e2e8f0;">
+          
+          <!-- Top Brand Accent Bar -->
+          <tr>
+            <td style="height: 4px; background: linear-gradient(90deg, #c2410c 0%, #ea580c 50%, #005c65 100%); line-height: 4px; font-size: 4px;">&nbsp;</td>
+          </tr>
+
+          <!-- Modern Refined Brand Header -->
+          <tr>
+            <td class="header-cell" style="padding: 26px 36px; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td width="46" valign="middle">
+                    <div style="width: 44px; height: 44px; background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; text-align: center; line-height: 44px;">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-top: 10px;">
+                        <path d="M12 9V14M12 17.5V18M10.29 3.86L1.82 18A2 2 0 003.55 21H20.45A2 2 0 0022.18 18L13.71 3.86A2 2 0 0010.29 3.86Z" stroke="#c2410c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                  </td>
+                  <td style="padding-left: 14px;" valign="middle">
+                    <span style="font-size: 19px; font-weight: 800; color: #005c65; letter-spacing: -0.3px; display: block; line-height: 1.2;">Smile Clinic</span>
+                    <span style="font-size: 11px; font-weight: 600; color: #c2410c; text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-top: 2px;">RxGuard · Clinical Safety Alert</span>
+                  </td>
+                  <td align="right" valign="middle" class="badge-cell">
+                    <span class="alert-pill" style="display: inline-block; background-color: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
+                      {{ severity_level }}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td class="content-cell" style="padding: 36px 36px 28px 36px;">
+              <h2 style="margin: 0 0 12px 0; font-size: 20px; font-weight: 700; color: #0f172a; letter-spacing: -0.2px;">Pharmacological Interaction Detected</h2>
+              <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+                Attention <strong>{{ prescriber_name }}</strong>,
+              </p>
+              <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+                An automated prescription safety screening flagged a <strong>{{ severity_level }}</strong> clinical interaction for Patient <strong>{{ patient_name }} (MRN: {{ patient_mrn }})</strong>.
+              </p>
+
+              <!-- Drug Interaction Banner -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 18px 20px; margin-bottom: 24px;">
+                <tr>
+                  <td class="drug-pair-cell" width="45%" valign="top">
+                    <span style="font-size: 11px; text-transform: uppercase; color: #9a3412; font-weight: 700;">Proposed Prescription</span><br>
+                    <strong style="font-size: 15px; color: #7c2d12;">{{ proposed_drug }}</strong>
+                  </td>
+                  <td class="drug-pair-cell" width="10%" align="center" valign="middle" style="font-size: 20px; color: #ea580c; font-weight: bold;">
+                    ⚡
+                  </td>
+                  <td class="drug-pair-cell" width="45%" valign="top">
+                    <span style="font-size: 11px; text-transform: uppercase; color: #9a3412; font-weight: 700;">Conflicting Profile Agent</span><br>
+                    <strong style="font-size: 15px; color: #7c2d12;">{{ conflict_agent }}</strong>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Clinical Mechanism Summary -->
+              <div style="background-color: #f8fafc; border-left: 4px solid #c2410c; padding: 14px 18px; margin-bottom: 26px; border-radius: 0 8px 8px 0;">
+                <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px;">Mechanism of Interaction</span>
+                <p style="margin: 6px 0 0; font-size: 13px; color: #334155; line-height: 1.5;">
+                  {{ interaction_mechanism }}
+                </p>
+              </div>
+
+              <!-- CTA Button -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 28px;">
+                <tr>
+                  <td align="center">
+                    <a href="{{ review_url }}" style="display: inline-block; background: #005c65; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700; padding: 12px 28px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 92, 101, 0.2);">
+                      Review Prescription & Overrides →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Clinical Support Info -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 10px; padding: 14px 16px;">
+                <tr>
+                  <td width="24" valign="top" style="font-size: 18px;">🩺</td>
+                  <td style="padding-left: 10px; font-size: 12px; color: #115e59; line-height: 1.5;">
+                    <strong>Pharmacopeia Support Desk:</strong><br>
+                    For questions regarding monograph citations, rule overrides, or clinical inquiries, contact our clinical safety team at:
+                    <a href="mailto:support.smileclinic@gmail.com" style="color: #005c65; font-weight: 700; text-decoration: underline;">support.smileclinic@gmail.com</a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 22px 36px; text-align: center;">
+              <p style="margin: 0 0 6px 0; font-size: 12px; font-weight: 600; color: #475569;">
+                Smile Clinic Clinical Decision Support System
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #94a3b8; line-height: 1.4;">
+                Generated automatically by CDS interaction screening daemon.<br>
+                Direct Support: <a href="mailto:support.smileclinic@gmail.com" style="color: #007782; text-decoration: underline;">support.smileclinic@gmail.com</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

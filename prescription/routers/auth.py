@@ -64,10 +64,12 @@ def send_template_email(to_email: str, subject: str, template_name: str, context
             html_content = f.read()
         for k, v in context.items():
             html_content = html_content.replace(f"{{{{ {k} }}}}", str(v))
+            html_content = html_content.replace(f"{{{{{k}}}}}", str(v))
     else:
         html_content = f"<h2>Smile Clinic RxGuard</h2><p>{subject}</p>"
 
     if not GOOGLE_APPS_SCRIPT_URL:
+        print(f"[AUTH_EMAIL_DEV] GOOGLE_APPS_SCRIPT_URL unset; email to {to_email} captured in local dev mode.")
         return False
 
     try:
@@ -80,8 +82,14 @@ def send_template_email(to_email: str, subject: str, template_name: str, context
             },
             timeout=10
         )
-        return res.status_code == 200
-    except Exception:
+        if res.status_code == 200:
+            print(f"[AUTH_EMAIL_SUCCESS] Dispatched '{template_name}' to {to_email} via Google Apps Script.")
+            return True
+        else:
+            print(f"[AUTH_EMAIL_ERROR] Apps Script returned status {res.status_code}: {res.text}")
+            return False
+    except Exception as e:
+        print(f"[AUTH_EMAIL_EXCEPTION] Email delivery skipped: {e}")
         return False
 
 
