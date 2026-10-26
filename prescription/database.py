@@ -40,7 +40,7 @@ def ensure_schema_compatibility(target_engine):
                 if "remembered_device_id" not in columns:
                     conn.execute(text("ALTER TABLE users ADD COLUMN remembered_device_id VARCHAR(255)"))
                 if "two_factor_enabled" not in columns:
-                    conn.execute(text("ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT 1"))
+                    conn.execute(text("ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT 0"))
                 conn.commit()
     except Exception as e:
         print(f"[DB Schema Notice] Schema check skipped: {e}")

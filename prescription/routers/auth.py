@@ -236,7 +236,7 @@ def verify_otp(payload: VerifyOtpRequest, db: Session = Depends(get_db)):
             "role": user.role,
             "licenseNumber": user.license_number or user.id,
             "clinicId": user.clinic_id,
-            "twoFactorEnabled": getattr(user, 'two_factor_enabled', True)
+            "twoFactorEnabled": getattr(user, 'two_factor_enabled', False)
         }
     )
 
@@ -375,9 +375,9 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             detail="Your account is not verified yet. A verification code has been sent to your email."
         )
 
-    # 5. Check "Two-Factor Authentication" & "Remember this device" setting
-    two_fa_active = getattr(user, 'two_factor_enabled', True)
-    if two_fa_active or (payload.remember_device is False):
+    # 5. Check "Two-Factor Authentication" setting
+    two_fa_active = bool(getattr(user, 'two_factor_enabled', False))
+    if two_fa_active:
         otp_code = generate_numeric_otp(6)
         expires_at = now + timedelta(minutes=10)
         db.query(AuthOtp).filter(AuthOtp.email == email_clean).delete()
@@ -423,7 +423,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             "role": user.role,
             "licenseNumber": user.license_number or user.id,
             "clinicId": user.clinic_id,
-            "twoFactorEnabled": getattr(user, 'two_factor_enabled', True)
+            "twoFactorEnabled": getattr(user, 'two_factor_enabled', False)
         }
     )
 
@@ -490,7 +490,7 @@ def verify_login_otp(payload: VerifyLoginOtpRequest, db: Session = Depends(get_d
             "role": user.role,
             "licenseNumber": user.license_number or user.id,
             "clinicId": user.clinic_id,
-            "twoFactorEnabled": getattr(user, 'two_factor_enabled', True)
+            "twoFactorEnabled": getattr(user, 'two_factor_enabled', False)
         }
     )
 
@@ -723,8 +723,34 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
             user.remembered_device_id = payload.device_id
         db.commit()
         db.refresh(user)
+
+        # If Two-Factor Authentication is enabled, trigger sign-in OTP verification
+        if bool(getattr(user, 'two_factor_enabled', False)):
+            now = datetime.now(timezone.utc)
+            otp_code = generate_numeric_otp(6)
+            expires_at = now + timedelta(minutes=10)
+            db.query(AuthOtp).filter(AuthOtp.email == email_clean).delete()
+            db.add(AuthOtp(email=email_clean, otp_code=otp_code, expires_at=expires_at))
+            db.commit()
+
+            send_template_email(
+                to_email=email_clean,
+                subject=f"Smile Clinic — Sign-In Verification Code: {otp_code}",
+                template_name="otp_verification.html",
+                context={
+                    "clinician_name": user.full_name,
+                    "otp_code": otp_code,
+                    "expires_in_minutes": 10
+                }
+            )
+
+            return AuthResponse(
+                status="otp_required",
+                message="Two-factor verification required. A 6-digit sign-in code has been dispatched to your email.",
+                dev_otp=otp_code
+            )
     else:
-        # New account: provision clinician in PostgreSQL
+        # New account: provision clinician in PostgreSQL with 2FA off by default
         raw_name = (payload.full_name or "").strip()
         display_name = raw_name if raw_name else email_clean.split("@")[0].capitalize()
         user = User(
@@ -734,6 +760,7 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
             auth_provider="google",
             clinic_id="CLINIC-MAIN",
             is_verified=True,
+            two_factor_enabled=False,
             remembered_device_id=payload.device_id
         )
         db.add(user)
@@ -753,7 +780,7 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
             "role": user.role,
             "licenseNumber": user.license_number or user.id,
             "clinicId": user.clinic_id,
-            "twoFactorEnabled": getattr(user, 'two_factor_enabled', True),
+            "twoFactorEnabled": getattr(user, 'two_factor_enabled', False),
             "authProvider": getattr(user, 'auth_provider', 'google')
         }
     )
