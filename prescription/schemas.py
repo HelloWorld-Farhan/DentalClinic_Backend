@@ -88,6 +88,41 @@ class GoogleAuthRequest(BaseModel):
         clean = v.strip().lower()
         if not EMAIL_REGEX.match(clean):
             raise ValueError("Invalid email address format.")
+class VerifyResetOtpRequest(BaseModel):
+    email: str
+    otp_code: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not EMAIL_REGEX.match(clean):
+            raise ValueError("Invalid email address format.")
+        return clean
+
+class VerifyPasswordRequest(BaseModel):
+    email: str
+    password: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not EMAIL_REGEX.match(clean):
+            raise ValueError("Invalid email address format.")
+        return clean
+
+class ChangePasswordRequest(BaseModel):
+    email: str
+    current_password: str
+    new_password: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not EMAIL_REGEX.match(clean):
+            raise ValueError("Invalid email address format.")
         return clean
 
 class AuthResponse(BaseModel):

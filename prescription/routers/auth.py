@@ -19,6 +19,9 @@ from ..schemas import (
     VerifyLoginOtpRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
+    VerifyResetOtpRequest,
+    VerifyPasswordRequest,
+    ChangePasswordRequest,
     Toggle2FaRequest,
     GoogleAuthRequest,
     AuthResponse
@@ -579,6 +582,100 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
     return AuthResponse(
         status="success",
         message="Password reset successfully! You can now sign in with your new password."
+    )
+
+
+@router.post("/verify-reset-otp", response_model=AuthResponse)
+def verify_reset_otp(payload: VerifyResetOtpRequest, db: Session = Depends(get_db)):
+    email_clean = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email_clean).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No clinician account found for this email address."
+        )
+
+    now = datetime.now(timezone.utc)
+    otp_record = (
+        db.query(AuthOtp)
+        .filter(AuthOtp.email == email_clean)
+        .order_by(AuthOtp.created_at.desc())
+        .first()
+    )
+
+    if not otp_record or otp_record.otp_code != payload.otp_code.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid 6-digit verification code. Please check the code sent to your email."
+        )
+
+    record_exp = otp_record.expires_at.replace(tzinfo=timezone.utc) if otp_record.expires_at.tzinfo is None else otp_record.expires_at
+    if record_exp < now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This verification code has expired. Please request a new one."
+        )
+
+    return AuthResponse(
+        status="success",
+        message="Verification code validated successfully."
+    )
+
+
+@router.post("/verify-password", response_model=AuthResponse)
+def verify_current_password(payload: VerifyPasswordRequest, db: Session = Depends(get_db)):
+    email_clean = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email_clean).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Clinician record not found."
+        )
+
+    if not user.hashed_password or not verify_password(payload.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect previous password. Please enter your valid current password."
+        )
+
+    return AuthResponse(
+        status="success",
+        message="Current password verified successfully."
+    )
+
+
+@router.post("/change-password", response_model=AuthResponse)
+def change_password(payload: ChangePasswordRequest, db: Session = Depends(get_db)):
+    email_clean = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email_clean).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Clinician record not found."
+        )
+
+    if not user.hashed_password or not verify_password(payload.current_password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect previous password. Please enter your valid current password."
+        )
+
+    if len(payload.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 6 characters in length."
+        )
+
+    user.hashed_password = hash_password(payload.new_password)
+    user.failed_login_attempts = 0
+    user.last_failed_attempt = None
+    user.locked_until = None
+    user.is_verified = True
+    db.commit()
+
+    return AuthResponse(
+        status="success",
+        message="Clinical password updated successfully in the database."
     )
 
 
