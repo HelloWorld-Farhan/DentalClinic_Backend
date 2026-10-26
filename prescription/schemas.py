@@ -88,6 +88,8 @@ class GoogleAuthRequest(BaseModel):
         clean = v.strip().lower()
         if not EMAIL_REGEX.match(clean):
             raise ValueError("Invalid email address format.")
+        return clean
+
 class VerifyResetOtpRequest(BaseModel):
     email: str
     otp_code: str

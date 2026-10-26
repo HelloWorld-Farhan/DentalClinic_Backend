@@ -28,17 +28,23 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS configuration driven dynamically by environment variables
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
-ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv("CORS_ORIGINS", f"{FRONTEND_URL},http://localhost:5173,http://localhost:3000").split(",")
-    if origin.strip()
+# CORS configuration driven dynamically by environment variables + Cloudflare Pages support
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://prescription-dentalclinic.pages.dev")
+DEFAULT_ORIGINS = [
+    "https://prescription-dentalclinic.pages.dev",
+    "http://localhost:5173",
+    "http://localhost:3000"
 ]
+if FRONTEND_URL and FRONTEND_URL not in DEFAULT_ORIGINS:
+    DEFAULT_ORIGINS.append(FRONTEND_URL)
+
+env_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
+ALLOWED_ORIGINS = list(dict.fromkeys(DEFAULT_ORIGINS + env_origins))
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS if "*" not in ALLOWED_ORIGINS else ["*"],
+    allow_origin_regex=r"https:\/\/.*\.pages\.dev",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
