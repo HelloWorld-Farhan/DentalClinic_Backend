@@ -841,5 +841,32 @@ def update_profile(payload: UpdateProfileRequest, db: Session = Depends(get_db))
     )
 
 
+@router.get("/profile-status")
+@router.get("/profile")
+def get_profile_status(email: str, db: Session = Depends(get_db)):
+    """
+    Retrieve clinical profile details and completion status across devices.
+    Once completed on any device, this returns profileCompleted: True.
+    """
+    email_clean = email.strip().lower()
+    user = db.query(User).filter(User.email == email_clean).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User account not found."
+        )
+
+    u_dict = user_dict(user)
+    is_completed = bool(getattr(user, "profile_completed", False))
+
+    return {
+        "status": "success",
+        "message": "User profile status retrieved successfully.",
+        "email": user.email,
+        "profileCompleted": is_completed,
+        "user": u_dict
+    }
+
+
 
 
