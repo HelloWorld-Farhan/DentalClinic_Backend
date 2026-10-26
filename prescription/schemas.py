@@ -65,6 +65,18 @@ class ResetPasswordRequest(BaseModel):
             raise ValueError("Invalid email address format.")
         return clean
 
+class Toggle2FaRequest(BaseModel):
+    email: str
+    enabled: bool
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not EMAIL_REGEX.match(clean):
+            raise ValueError("Invalid email address format.")
+        return clean
+
 class AuthResponse(BaseModel):
     status: str
     message: str

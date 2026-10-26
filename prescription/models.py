@@ -20,6 +20,7 @@ class User(Base):
     locked_until = Column(DateTime, nullable=True)
     last_failed_attempt = Column(DateTime, nullable=True)
     remembered_device_id = Column(String(255), nullable=True)
+    two_factor_enabled = Column(Boolean, default=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 

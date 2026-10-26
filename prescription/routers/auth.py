@@ -19,6 +19,7 @@ from ..schemas import (
     VerifyLoginOtpRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
+    Toggle2FaRequest,
     AuthResponse
 )
 
@@ -230,7 +231,8 @@ def verify_otp(payload: VerifyOtpRequest, db: Session = Depends(get_db)):
             "fullName": user.full_name,
             "role": user.role,
             "licenseNumber": user.license_number or user.id,
-            "clinicId": user.clinic_id
+            "clinicId": user.clinic_id,
+            "twoFactorEnabled": getattr(user, 'two_factor_enabled', True)
         }
     )
 
@@ -369,9 +371,9 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             detail="Your account is not verified yet. A verification code has been sent to your email."
         )
 
-    # 5. Check "Remember this device" setting
-    # If remember_device is False, enforce 2FA OTP verification for this sign-in session
-    if payload.remember_device is False:
+    # 5. Check "Two-Factor Authentication" & "Remember this device" setting
+    two_fa_active = getattr(user, 'two_factor_enabled', True)
+    if two_fa_active or (payload.remember_device is False):
         otp_code = generate_numeric_otp(6)
         expires_at = now + timedelta(minutes=10)
         db.query(AuthOtp).filter(AuthOtp.email == email_clean).delete()
@@ -416,7 +418,8 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             "fullName": user.full_name,
             "role": user.role,
             "licenseNumber": user.license_number or user.id,
-            "clinicId": user.clinic_id
+            "clinicId": user.clinic_id,
+            "twoFactorEnabled": getattr(user, 'two_factor_enabled', True)
         }
     )
 
@@ -481,7 +484,8 @@ def verify_login_otp(payload: VerifyLoginOtpRequest, db: Session = Depends(get_d
             "fullName": user.full_name,
             "role": user.role,
             "licenseNumber": user.license_number or user.id,
-            "clinicId": user.clinic_id
+            "clinicId": user.clinic_id,
+            "twoFactorEnabled": getattr(user, 'two_factor_enabled', True)
         }
     )
 
@@ -574,4 +578,34 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
         status="success",
         message="Password reset successfully! You can now sign in with your new password."
     )
+
+
+@router.post("/toggle-2fa", response_model=AuthResponse)
+def toggle_2fa(payload: Toggle2FaRequest, db: Session = Depends(get_db)):
+    email_clean = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email_clean).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Clinician record not found."
+        )
+
+    user.two_factor_enabled = payload.enabled
+    db.commit()
+    db.refresh(user)
+
+    return AuthResponse(
+        status="success",
+        message=f"Two-Factor Authentication {'activated' if payload.enabled else 'deactivated'} successfully.",
+        user={
+            "id": user.id,
+            "email": user.email,
+            "fullName": user.full_name,
+            "role": user.role,
+            "licenseNumber": user.license_number or user.id,
+            "clinicId": user.clinic_id,
+            "twoFactorEnabled": user.two_factor_enabled
+        }
+    )
+
 
