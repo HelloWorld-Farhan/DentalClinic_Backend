@@ -73,6 +73,19 @@ class Toggle2FaRequest(BaseModel):
     @classmethod
     def validate_email(cls, v: str) -> str:
         clean = v.strip().lower()
+        return clean
+
+class GoogleAuthRequest(BaseModel):
+    email: str
+    full_name: Optional[str] = "Clinician"
+    id_token: Optional[str] = None
+    photo_url: Optional[str] = None
+    device_id: Optional[str] = None
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        clean = v.strip().lower()
         if not EMAIL_REGEX.match(clean):
             raise ValueError("Invalid email address format.")
         return clean

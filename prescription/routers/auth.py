@@ -20,6 +20,7 @@ from ..schemas import (
     ForgotPasswordRequest,
     ResetPasswordRequest,
     Toggle2FaRequest,
+    GoogleAuthRequest,
     AuthResponse
 )
 
@@ -608,5 +609,57 @@ def toggle_2fa(payload: Toggle2FaRequest, db: Session = Depends(get_db)):
             "twoFactorEnabled": user.two_factor_enabled
         }
     )
+
+
+@router.post("/google", response_model=AuthResponse)
+def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
+    email_clean = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email_clean).first()
+
+    if user:
+        # Existing account: seamlessly link Google, mark email verified, clear locks
+        user.is_verified = True
+        user.failed_login_attempts = 0
+        user.last_failed_attempt = None
+        user.locked_until = None
+        if payload.device_id:
+            user.remembered_device_id = payload.device_id
+        db.commit()
+        db.refresh(user)
+    else:
+        # New account: provision clinician in PostgreSQL
+        raw_name = (payload.full_name or "").strip()
+        display_name = raw_name if raw_name else email_clean.split("@")[0].capitalize()
+        user = User(
+            email=email_clean,
+            full_name=display_name,
+            role="Dentist",
+            auth_provider="google",
+            clinic_id="CLINIC-MAIN",
+            is_verified=True,
+            remembered_device_id=payload.device_id
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    token = create_jwt_token(user)
+
+    return AuthResponse(
+        status="success",
+        message="Google authentication successful.",
+        token=token,
+        user={
+            "id": user.id,
+            "email": user.email,
+            "fullName": user.full_name,
+            "role": user.role,
+            "licenseNumber": user.license_number or user.id,
+            "clinicId": user.clinic_id,
+            "twoFactorEnabled": getattr(user, 'two_factor_enabled', True),
+            "authProvider": getattr(user, 'auth_provider', 'google')
+        }
+    )
+
 
 
