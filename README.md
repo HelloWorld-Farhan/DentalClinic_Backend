@@ -55,7 +55,7 @@
 ### Step 1 — Clone the Repository
 
 ```bash
-git clone https://github.com/HelloWorld-Farhan/DentalClinic_Backend.git
+git clone <REPOSITORY_URL>
 cd DentalClinic_Backend
 ```
 
@@ -84,8 +84,8 @@ pip install -r requirements.txt
 Create a `.env` file in the project root:
 
 ```env
-DATABASE_URL=postgresql://postgres:[PASSWORD]@db.xxxx.supabase.co:5432/postgres
-JWT_SECRET=your_super_secret_jwt_key_here
+DATABASE_URL=postgresql://<DB_USER>:<DB_PASSWORD>@<DB_HOST>:<DB_PORT>/<DB_NAME>
+JWT_SECRET=<YOUR_SECURE_JWT_SECRET>
 PORT=8000
 ```
 
@@ -97,8 +97,8 @@ PORT=8000
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-> The API will be running live at `http://localhost:8000`.  
-> Interactive API Docs (Swagger): `http://localhost:8000/docs`
+> The API will be running live on your configured local port (e.g. `http://localhost:<PORT>`).  
+> Interactive API Docs (Swagger): `http://localhost:<PORT>/docs`
 
 ---
 
@@ -107,8 +107,6 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```text
 DentalClinic_Backend/
 ├── .gitignore                   # Strictly blocks .env, *.db, and __pycache__
-├── SECURITY_RULES.md            # Zero-hardcoding enforcement policy
-├── ENV_REFERENCE.md             # Full reference of environment variables
 ├── README.md                    # Comprehensive architecture documentation
 ├── requirements.txt             # Root production dependencies
 ├── main.py                      # Root FastAPI entrypoint (delegates to prescription service)
@@ -119,7 +117,6 @@ DentalClinic_Backend/
     ├── models.py                # Clinician User & AuthOtp database models
     ├── schemas.py               # Pydantic request/response schemas with regex validation
     ├── requirements.txt         # Module dependencies
-    ├── ENV_REFERENCE.md         # Prescription service environment guide
     ├── google_apps_script.js    # Production Google Apps Script email gateway source
     ├── test_api_endpoints.py    # Automated test suite (Signup -> OTP -> Login)
     └── routers/
@@ -133,16 +130,16 @@ DentalClinic_Backend/
 
 1. Log into your **[Render Dashboard](https://dashboard.render.com)**.
 2. Click **New +** $\rightarrow$ **Web Service**.
-3. Connect your GitHub repository: `HelloWorld-Farhan/DentalClinic_Backend`.
+3. Connect your project repository.
 4. Configure the build parameters:
    * **Runtime:** `Python 3`
    * **Build Command:** `pip install -r requirements.txt`
    * **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
 5. Under **Environment Variables**, add:
-   * `DATABASE_URL` = *(Your Supabase connection string)*
+   * `DATABASE_URL` = *(Your connection string)*
    * `JWT_SECRET` = *(Your secure secret string)*
 6. Click **Deploy Web Service**.
-7. *(Optional Keep-Alive)*: Add your Render URL (`https://your-service.onrender.com/health`) as an HTTP monitor in **[UptimeRobot](https://uptimerobot.com)** every 10 minutes to keep it awake 24/7.
+7. *(Optional Keep-Alive)*: Add your service URL (`https://<YOUR_SERVICE_URL>/health`) as an HTTP monitor in **[UptimeRobot](https://uptimerobot.com)** every 10 minutes to keep it awake 24/7.
 
 ---
 

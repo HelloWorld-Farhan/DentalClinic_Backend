@@ -6,3 +6,8 @@
 __pycache__/
 *.pyc
 *.db
+
+# Markdown tracking policy: ignore all markdown files except root README.md
+*.md
+**/*.md
+!README.md
