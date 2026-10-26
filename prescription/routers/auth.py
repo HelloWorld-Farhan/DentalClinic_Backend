@@ -76,7 +76,7 @@ def send_template_email(to_email: str, subject: str, template_name: str, context
             html_content = html_content.replace(f"{{{{ {k} }}}}", str(v))
             html_content = html_content.replace(f"{{{{{k}}}}}", str(v))
     else:
-        html_content = f"<h2>Smile Clinic RxGuard</h2><p>{subject}</p>"
+        html_content = f"<h2>Smile Clinic</h2><p>{subject}</p>"
 
     if not GOOGLE_APPS_SCRIPT_URL:
         print(f"[AUTH_EMAIL_DEV] GOOGLE_APPS_SCRIPT_URL unset; email to {to_email} captured in local dev mode.")
@@ -223,7 +223,7 @@ def verify_otp(payload: VerifyOtpRequest, db: Session = Depends(get_db)):
 
     return AuthResponse(
         status="success",
-        message="Account verified successfully! Welcome to Smile Clinic RxGuard.",
+        message="Account verified successfully! Welcome to Smile Clinic.",
         token=token,
         user={
             "id": user.id,

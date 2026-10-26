@@ -1,19 +1,18 @@
 /**
  * ==============================================================================
- * Smile Clinic RxGuard — Google Apps Script Email Gateway
+ * Smile Clinic — Google Apps Script Email Gateway
  * ==============================================================================
  * 
  * INSTRUCTIONS FOR DEPLOYMENT:
  * 1. Open https://script.google.com in your browser (signed in as support.smileclinic@gmail.com).
  * 2. Click "New Project" and rename it to "Smile Clinic Mail Gateway".
  * 3. Replace all existing code in Code.gs with this exact file content.
- * 4. Click "Deploy" (top right) -> "New deployment".
+ * 4. Click "Deploy" (top right) -> "Manage deployments" -> "Edit" (or "New deployment").
  * 5. Select type: "Web app".
- * 6. Set Description: "Smile Clinic Email API v1".
+ * 6. Set Description: "Smile Clinic Email API v1.1".
  * 7. Set "Execute as": "Me (support.smileclinic@gmail.com)".
  * 8. Set "Who has access": "Anyone"  <-- CRITICAL for backend to send requests without login.
- * 9. Click "Deploy", approve the initial one-time Google permissions.
- * 10. Copy the Web app URL (ends with /exec) into your backend .env as GOOGLE_APPS_SCRIPT_URL.
+ * 9. Click "Deploy", approve permissions if prompted.
  * ==============================================================================
  */
 
@@ -28,7 +27,7 @@ function doPost(e) {
 
     var data = JSON.parse(e.postData.contents);
     var recipient = data.to;
-    var subject = data.subject || "Smile Clinic RxGuard Notification";
+    var subject = data.subject || "Smile Clinic Notification";
     var htmlBody = data.html || "<p>Smile Clinic Clinical Notification</p>";
     var plainText = data.text || "Please view this clinical message in an HTML-enabled email client.";
 
@@ -41,7 +40,7 @@ function doPost(e) {
 
     // Send email using official Google infrastructure from support.smileclinic@gmail.com
     GmailApp.sendEmail(recipient, subject, plainText, {
-      name: "Smile Clinic RxGuard",
+      name: "Smile Clinic",
       htmlBody: htmlBody
     });
 

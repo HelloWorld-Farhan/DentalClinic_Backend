@@ -1,6 +1,6 @@
 # 📧 Smile Clinic Email Templates Reference & Gallery
 
-All templates in this folder are designed to match the **Smile Clinic RxGuard UI** design system (Inter typography, hospital-grade teal/emerald gradients `#005c65` / `#007782`, subtle CSS keyframe pulse animations, high-contrast dark/light adaptability, and mobile-responsive email table layouts).
+All templates in this folder are designed to match the **Smile Clinic UI** design system (Inter typography, hospital-grade teal/emerald gradients `#005c65` / `#007782`, subtle CSS keyframe pulse animations, high-contrast dark/light adaptability, and mobile-responsive email table layouts).
 
 All templates prominently feature the official technical & clinical support contact:
 **`support.smileclinic@gmail.com`**
