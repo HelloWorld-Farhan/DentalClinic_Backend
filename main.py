@@ -1,17 +1,12 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+"""
+Smile Clinic Backend Entry Point
+Delegates directly to the Prescription Service API.
+"""
+import os
+import uvicorn
+from prescription.main import app
 
-app = FastAPI(title="Smile Clinic Core API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.get("/")
-@app.get("/health")
-def health_check():
-    return {"status": "healthy", "service": "SmileClinic-CoreAPI"}
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", "8000"))
+    host = os.getenv("HOST", "0.0.0.0")
+    uvicorn.run("prescription.main:app", host=host, port=port, reload=True)

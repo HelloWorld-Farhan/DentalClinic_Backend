@@ -106,13 +106,25 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 ```text
 DentalClinic_Backend/
-├── .gitignore               # Strictly blocks .env, *.db, and __pycache__
-├── SECURITY_RULES.md        # Zero-hardcoding enforcement policy
-├── README.md                # Comprehensive architecture documentation
-├── requirements.txt         # Production Python dependencies
-├── database.py              # SQLAlchemy engine & Supabase connection pool
-├── models.py                # User, PrescriptionAudit & EHR database schemas
-└── main.py                  # FastAPI application entrypoint & API routers
+├── .gitignore                   # Strictly blocks .env, *.db, and __pycache__
+├── SECURITY_RULES.md            # Zero-hardcoding enforcement policy
+├── ENV_REFERENCE.md             # Full reference of environment variables
+├── README.md                    # Comprehensive architecture documentation
+├── requirements.txt             # Root production dependencies
+├── main.py                      # Root FastAPI entrypoint (delegates to prescription service)
+└── prescription/                # 💊 Modular Prescription Backend Service
+    ├── __init__.py              # Package marker
+    ├── main.py                  # Standalone FastAPI service with /health & CORS
+    ├── database.py              # Supabase PostgreSQL engine + SQLite dev fallback
+    ├── models.py                # Clinician User & AuthOtp database models
+    ├── schemas.py               # Pydantic request/response schemas with regex validation
+    ├── requirements.txt         # Module dependencies
+    ├── ENV_REFERENCE.md         # Prescription service environment guide
+    ├── google_apps_script.js    # Production Google Apps Script email gateway source
+    ├── test_api_endpoints.py    # Automated test suite (Signup -> OTP -> Login)
+    └── routers/
+        ├── __init__.py
+        └── auth.py              # Signup, OTP verification & login endpoints
 ```
 
 ---
