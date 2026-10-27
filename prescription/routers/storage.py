@@ -76,3 +76,37 @@ async def upload_document_to_r2(
             "size": len(content) if 'content' in locals() else 0,
             "storage": "cloudflare-r2"
         }
+
+@router.post("/delete")
+@router.delete("/delete")
+async def delete_document_from_r2(key: str = Form(None), url: str = Form(None)):
+    try:
+        target_key = key
+        if not target_key and url:
+            if R2_PUBLIC_URL and url.startswith(R2_PUBLIC_URL):
+                target_key = url[len(R2_PUBLIC_URL):].lstrip("/")
+            elif "r2.dev/" in url:
+                target_key = url.split("r2.dev/", 1)[1]
+            elif "r2.cloudflarestorage.com/" in url:
+                target_key = url.split("r2.cloudflarestorage.com/", 1)[1]
+            else:
+                parts = url.split("/")
+                target_key = "/".join(parts[-3:]) if len(parts) >= 3 else parts[-1]
+
+        if not target_key:
+            return {"status": "error", "message": "Key or URL required for deletion"}
+
+        s3 = get_s3_client()
+        if s3:
+            s3.delete_object(Bucket=R2_BUCKET_NAME, Key=target_key)
+            print(f"[R2 Delete Success] Purged {target_key} from {R2_BUCKET_NAME}")
+
+        return {
+            "status": "success",
+            "message": "Successfully deleted object from Cloudflare R2",
+            "key": target_key
+        }
+    except Exception as e:
+        print(f"[R2 Delete Error] Error deleting {key or url}: {e}")
+        return {"status": "error", "message": str(e)}
+
