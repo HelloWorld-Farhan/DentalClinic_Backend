@@ -136,6 +136,7 @@ class UpdateProfileRequest(BaseModel):
     has_allergies: Optional[bool] = False
     allergies_description: Optional[str] = None
     profile_completed: Optional[bool] = True
+    photo_url: Optional[str] = None
 
     @field_validator("email")
     @classmethod

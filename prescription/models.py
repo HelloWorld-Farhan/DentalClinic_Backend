@@ -20,6 +20,7 @@ class User(Base):
     has_allergies = Column(Boolean, default=False)
     allergies_description = Column(String(500), nullable=True)
     profile_completed = Column(Boolean, default=False)
+    photo_url = Column(Text, nullable=True)
     is_google_linked = Column(Boolean, default=False)
     is_verified = Column(Boolean, default=False)
     failed_login_attempts = Column(Integer, default=0)

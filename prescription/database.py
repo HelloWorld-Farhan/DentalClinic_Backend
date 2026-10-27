@@ -64,6 +64,8 @@ def ensure_schema_compatibility(target_engine):
                     conn.execute(text("ALTER TABLE users ADD COLUMN allergies_description VARCHAR(500)"))
                 if "profile_completed" not in columns:
                     conn.execute(text("ALTER TABLE users ADD COLUMN profile_completed BOOLEAN DEFAULT FALSE"))
+                if "photo_url" not in columns:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN photo_url TEXT"))
                 if "is_google_linked" not in columns:
                     conn.execute(text("ALTER TABLE users ADD COLUMN is_google_linked BOOLEAN DEFAULT FALSE"))
                 if "license_number" in columns:

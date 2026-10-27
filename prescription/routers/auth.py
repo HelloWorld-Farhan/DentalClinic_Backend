@@ -74,6 +74,7 @@ def user_dict(user: User) -> dict:
         "hasAllergies": getattr(user, 'has_allergies', False) or False,
         "allergiesDescription": getattr(user, 'allergies_description', None) or "",
         "profileCompleted": getattr(user, 'profile_completed', False) or False,
+        "photoUrl": getattr(user, 'photo_url', None) or "",
         "twoFactorEnabled": getattr(user, 'two_factor_enabled', False) or False,
         "authProvider": getattr(user, 'auth_provider', 'email'),
         "isGoogleLinked": bool(getattr(user, 'is_google_linked', False) or user.auth_provider == 'google'),
@@ -830,6 +831,8 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
         # Existing account (email/password or OAuth): seamlessly link Google, mark verified, clear locks
         user.is_verified = True
         user.is_google_linked = True
+        if payload.photo_url and not getattr(user, 'photo_url', None):
+            user.photo_url = payload.photo_url.strip()
         user.failed_login_attempts = 0
         user.last_failed_attempt = None
         user.locked_until = None
@@ -884,6 +887,7 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
             full_name=display_name,
             role="USER",
             auth_provider="google",
+            photo_url=payload.photo_url.strip() if payload.photo_url else None,
             is_google_linked=True,
             is_verified=True,
             two_factor_enabled=False,
@@ -963,6 +967,8 @@ def update_profile(payload: UpdateProfileRequest, db: Session = Depends(get_db))
         user.allergies_description = payload.allergies_description
     if payload.profile_completed is not None:
         user.profile_completed = payload.profile_completed
+    if payload.photo_url is not None:
+        user.photo_url = payload.photo_url.strip()
 
     db.commit()
     db.refresh(user)
