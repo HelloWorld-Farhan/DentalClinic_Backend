@@ -12,7 +12,7 @@ else:
     load_dotenv(override=False)
 
 from .database import engine, Base
-from .routers import auth
+from .routers import auth, storage
 
 # Auto-initialize database tables if not existing
 try:
@@ -49,6 +49,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(storage.router)
 
 @app.get("/")
 @app.get("/health")

@@ -6,3 +6,5 @@ bcrypt
 pyjwt
 python-dotenv
 requests
+boto3
+python-multipart
