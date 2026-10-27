@@ -75,7 +75,9 @@ def user_dict(user: User) -> dict:
         "allergiesDescription": getattr(user, 'allergies_description', None) or "",
         "profileCompleted": getattr(user, 'profile_completed', False) or False,
         "twoFactorEnabled": getattr(user, 'two_factor_enabled', False) or False,
-        "authProvider": getattr(user, 'auth_provider', 'email')
+        "authProvider": getattr(user, 'auth_provider', 'email'),
+        "isGoogleLinked": bool(getattr(user, 'is_google_linked', False) or user.auth_provider == 'google'),
+        "hasPassword": bool(user.hashed_password is not None and user.hashed_password.strip() != "")
     }
 
 def create_jwt_token(user: User) -> str:
@@ -825,8 +827,9 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email_clean).first()
 
     if user:
-        # Existing account: seamlessly link Google, mark email verified, clear locks
+        # Existing account (email/password or OAuth): seamlessly link Google, mark verified, clear locks
         user.is_verified = True
+        user.is_google_linked = True
         user.failed_login_attempts = 0
         user.last_failed_attempt = None
         user.locked_until = None
@@ -834,6 +837,18 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
             add_user_remembered_device(user, payload.device_id)
         db.commit()
         db.refresh(user)
+
+        # Dispatch welcome email on Google login to clinician's email address
+        send_template_email(
+            to_email=email_clean,
+            subject="Welcome to Smile Clinic — Clinical Account Activated",
+            template_name="welcome_clinician.html",
+            context={
+                "clinician_name": user.full_name,
+                "clinician_email": user.email,
+                "portal_login_url": PORTAL_LOGIN_URL
+            }
+        )
 
         # If Two-Factor Authentication is enabled, trigger sign-in OTP verification
         if bool(getattr(user, 'two_factor_enabled', False)):
@@ -869,6 +884,7 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
             full_name=display_name,
             role="USER",
             auth_provider="google",
+            is_google_linked=True,
             is_verified=True,
             two_factor_enabled=False,
             remembered_device_id=payload.device_id
@@ -877,12 +893,43 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
 
+        # Dispatch welcome email on Google registration
+        send_template_email(
+            to_email=email_clean,
+            subject="Welcome to Smile Clinic — Clinical Account Activated",
+            template_name="welcome_clinician.html",
+            context={
+                "clinician_name": user.full_name,
+                "clinician_email": user.email,
+                "portal_login_url": PORTAL_LOGIN_URL
+            }
+        )
+
     token = create_jwt_token(user)
 
     return AuthResponse(
         status="success",
         message="Google authentication successful.",
         token=token,
+        user=user_dict(user)
+    )
+
+
+@router.post("/link-google", response_model=AuthResponse)
+def link_google(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
+    email_clean = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email_clean).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Clinician record not found."
+        )
+    user.is_google_linked = True
+    db.commit()
+    db.refresh(user)
+    return AuthResponse(
+        status="success",
+        message="Google account linked successfully.",
         user=user_dict(user)
     )
 
