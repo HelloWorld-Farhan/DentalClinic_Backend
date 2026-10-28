@@ -8,3 +8,4 @@ python-dotenv
 requests
 boto3
 python-multipart
+reportlab>=4.4.0
