@@ -73,6 +73,17 @@ def ensure_schema_compatibility(target_engine):
                 if "clinic_id" in columns:
                     conn.execute(text("ALTER TABLE users DROP COLUMN clinic_id"))
                 conn.commit()
+
+        if "prescription_checks" in inspector.get_table_names():
+            chk_cols = [c["name"] for c in inspector.get_columns("prescription_checks")]
+            with target_engine.connect() as conn:
+                if "source_document_url" not in chk_cols:
+                    conn.execute(text("ALTER TABLE prescription_checks ADD COLUMN source_document_url TEXT"))
+                if "source_document_name" not in chk_cols:
+                    conn.execute(text("ALTER TABLE prescription_checks ADD COLUMN source_document_name VARCHAR(255)"))
+                if "source_type" not in chk_cols:
+                    conn.execute(text("ALTER TABLE prescription_checks ADD COLUMN source_type VARCHAR(50)"))
+                conn.commit()
     except Exception as e:
         print(f"[DB Schema Notice] Schema check: {e}")
 

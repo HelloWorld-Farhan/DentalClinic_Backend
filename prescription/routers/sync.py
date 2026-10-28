@@ -87,6 +87,9 @@ def get_all_user_data(
                 "status": c.status,
                 "pdfFilename": c.pdf_filename,
                 "pdfUrl": c.pdf_url,
+                "sourceDocumentUrl": getattr(c, "source_document_url", None),
+                "sourceDocumentName": getattr(c, "source_document_name", None),
+                "sourceType": getattr(c, "source_type", None),
                 "notes": c.notes,
                 "digitalSeal": c.digital_seal,
                 "timestampMs": c.timestamp_ms,
@@ -104,6 +107,9 @@ def get_all_user_data(
                 "severity": a.severity,
                 "pdfFilename": a.pdf_filename,
                 "pdfUrl": a.pdf_url,
+                "sourceDocumentUrl": (a.inner_data or {}).get("sourceDocumentUrl") if isinstance(a.inner_data, dict) else None,
+                "sourceDocumentName": (a.inner_data or {}).get("sourceDocumentName") if isinstance(a.inner_data, dict) else None,
+                "sourceType": (a.inner_data or {}).get("sourceType") if isinstance(a.inner_data, dict) else None,
                 "innerData": a.inner_data or {},
                 "hash": a.hash,
                 "timestampMs": a.timestamp_ms,
@@ -181,6 +187,9 @@ def batch_push_user_data(
             existing.notes = c.get("notes") or existing.notes
             existing.pdf_filename = c.get("pdfFilename") or existing.pdf_filename
             existing.pdf_url = c.get("pdfUrl") or existing.pdf_url
+        existing.source_document_url = c.get("sourceDocumentUrl") or existing.source_document_url
+        existing.source_document_name = c.get("sourceDocumentName") or existing.source_document_name
+        existing.source_type = c.get("sourceType") or existing.source_type
         else:
             db.add(
                 PrescriptionCheck(
@@ -196,6 +205,9 @@ def batch_push_user_data(
                     status=c.get("status") or "safe",
                     pdf_filename=c.get("pdfFilename"),
                     pdf_url=c.get("pdfUrl"),
+            source_document_url=c.get("sourceDocumentUrl"),
+            source_document_name=c.get("sourceDocumentName"),
+            source_type=c.get("sourceType"),
                     notes=c.get("notes"),
                     digital_seal=c.get("digitalSeal") or c.get("hash"),
                     timestamp_ms=c.get("timestampMs") or int(datetime.now(timezone.utc).timestamp() * 1000),
