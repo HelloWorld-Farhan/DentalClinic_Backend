@@ -138,10 +138,12 @@ async def extract_prescription(file: UploadFile = File(...)):
 
     prompt = (
         "You are an expert clinical pharmacologist and medical document parser. "
-        "Analyze this medical prescription image/document with utmost clinical precision. "
-        "Extract doctor handwriting, abbreviations (e.g. TID, BID, PO, PRN, OD, HS, cap, tab), "
-        "and normalize all dates to YYYY-MM-DD or standard readable formats. "
-        "If a field is not present or illegible, set it to null or a sensible clinical inference.\n\n"
+        "Analyze this medical prescription or clinical document with utmost clinical precision. "
+        "Extract doctor handwriting, abbreviations (e.g. TID, BID, PO, PRN, OD, HS, cap, tab, ℞), "
+        "and normalize all dates to YYYY-MM-DD or standard readable formats.\n\n"
+        "Generate relevant clinical decision support rules & contraindication safety warnings for the prescribed medications "
+        "(e.g., drug-drug interactions, beta-lactam allergy contraindications, central nervous system depression warnings, "
+        "or organ clearance titrations).\n\n"
         "Return ONLY a valid JSON object with EXACTLY this schema (do NOT wrap in markdown code blocks):\n"
         "{\n"
         '  "patient": {\n'
@@ -164,6 +166,16 @@ async def extract_prescription(file: UploadFile = File(...)):
         '      "route": "string (e.g. Oral (PO))",\n'
         '      "indication": "string"\n'
         '    }\n'
+        '  ],\n'
+        '  "rules": [\n'
+        '    {\n'
+        '      "drugA": "string",\n'
+        '      "drugB": "string",\n'
+        '      "severity": "contraindicated | major | moderate",\n'
+        '      "category": "Drug-Drug | Drug-Allergy | Drug-Condition | Renal Dose Adjustment",\n'
+        '      "description": "Clinical explanation of safety risk and mechanism",\n'
+        '      "active": true\n'
+        '    }\n'
         '  ]\n'
         "}"
     )
@@ -177,7 +189,8 @@ async def extract_prescription(file: UploadFile = File(...)):
             "status": "success",
             "filename": file.filename,
             "patient": extracted.get("patient", {}),
-            "medicines": extracted.get("medicines", [])
+            "medicines": extracted.get("medicines", []),
+            "rules": extracted.get("rules", [])
         }
     except HTTPException:
         raise
@@ -188,7 +201,8 @@ async def extract_prescription(file: UploadFile = File(...)):
 async def extract_clinical_rules(file: UploadFile = File(...)):
     """
     Extracts clinical decision support rules (drug interactions, contraindications)
-    from medical documents, pharmacology monographs, or guidelines.
+    and any detected medicines from medical documents, pharmacology monographs,
+    prescriptions, or guidelines.
     """
     content = await file.read()
     if not content:
@@ -203,6 +217,8 @@ async def extract_clinical_rules(file: UploadFile = File(...)):
         mime_type = "image/jpeg"
     elif filename_lower.endswith(".png"):
         mime_type = "image/png"
+    elif filename_lower.endswith(".webp"):
+        mime_type = "image/webp"
     else:
         mime_type = "application/pdf" if b"%PDF" in content[:10] else "image/jpeg"
 
@@ -210,10 +226,22 @@ async def extract_clinical_rules(file: UploadFile = File(...)):
 
     prompt = (
         "You are an expert clinical pharmacologist. "
-        "Extract all drug-drug interactions, drug-allergy contraindications, and clinical dosing rules "
-        "from this document.\n"
+        "Analyze this document (which may be a prescription slip, clinical protocol, or pharmacology guide). "
+        "Extract all prescribed medications, and extract/generate all drug-drug interactions, "
+        "drug-allergy contraindications, and clinical dosing rules associated with them.\n\n"
         "Return ONLY a valid JSON object with this exact structure:\n"
         "{\n"
+        '  "medicines": [\n'
+        '    {\n'
+        '      "drugName": "string",\n'
+        '      "genericName": "string",\n'
+        '      "dosage": "string",\n'
+        '      "frequency": "string",\n'
+        '      "duration": "string",\n'
+        '      "route": "string",\n'
+        '      "indication": "string"\n'
+        '    }\n'
+        '  ],\n'
         '  "rules": [\n'
         '    {\n'
         '      "drugA": "string",\n'
@@ -235,6 +263,7 @@ async def extract_clinical_rules(file: UploadFile = File(...)):
         return {
             "status": "success",
             "filename": file.filename,
+            "medicines": extracted.get("medicines", []),
             "rules": extracted.get("rules", [])
         }
     except HTTPException:
