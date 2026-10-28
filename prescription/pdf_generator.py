@@ -239,6 +239,12 @@ def generate_2page_cds_pdf(data: Dict[str, Any]) -> bytes:
     if gemini_summary.get("cnsAlert"):
         summary_box_content.append(Spacer(1, 1.5 * mm))
         summary_box_content.append(Paragraph(f"<b>Central Nervous System & Sedation Profile:</b> {gemini_summary['cnsAlert']}", body_style))
+    if gemini_summary.get("questionAnswers"):
+        summary_box_content.append(Spacer(1, 1.5 * mm))
+        qa_paras = []
+        for qa in gemini_summary["questionAnswers"][:2]:
+            qa_paras.append(f"&bull; <i>{qa.get('question')}</i>: <b>{qa.get('answer')}</b>")
+        summary_box_content.append(Paragraph("<b>Patient & Clinical Inquiries Evaluated:</b><br/>" + "<br/>".join(qa_paras), body_style))
 
     summary_table = Table([[summary_box_content]], colWidths=[190 * mm])
     summary_table.setStyle(TableStyle([

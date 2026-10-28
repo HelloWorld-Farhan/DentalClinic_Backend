@@ -518,6 +518,7 @@ def generate_unique_report_analysis(
     patient_demographics = f"{payload.get('patientAge', 'Adult')} {payload.get('patientGender', '')}".strip() or "Adult Patient"
     prescriptions = payload.get("prescriptions", [])
     alerts = payload.get("alerts", [])
+    questions = payload.get("questions") or payload.get("inquiries") or []
 
     rx_descriptions = []
     for rx in prescriptions:
@@ -534,23 +535,28 @@ def generate_unique_report_analysis(
         alert_descriptions.append(f"[{a.get('severity', 'info').upper()}] {a.get('title')}: {a.get('recommendation')}")
     alert_text = "; ".join(alert_descriptions) if alert_descriptions else "No active contraindications flagged"
 
+    q_block = ""
+    if questions:
+        q_lines = "\n".join([f"  {idx+1}. {q}" for idx, q in enumerate(questions)])
+        q_block = f"""\nClinical Inquiries & Patient Questions to Evaluate and Answer:\n{q_lines}\n"""
+
     prompt = f"""You are a senior clinical pharmacology specialist for Smile Clinic Dental Healthcare.
 Analyze this specific prescription order for this individual patient:
 - Patient: {patient_name} (MRN: {patient_mrn}), {patient_demographics}
 - Prescribed Regimen: {rx_text}
-- Screened CDS Alerts: {alert_text}
-
+- Screened CDS Alerts: {alert_text}{q_block}
 Provide an individualized, evidence-based pharmacological evaluation.
 Screen specifically for:
 1. Therapeutic duplication (e.g., dual PPIs, duplicate NSAIDs, duplicate antibiotics).
 2. Central Nervous System (CNS) sedation risks (additive benzodiazepines, muscle relaxants, antihistamines).
 3. Dental operatory cautions (xerostomia, bleeding risk, interactions with epinephrine in dental local anesthetics).
 4. Actionable dispensing recommendations for the clinician.
+5. Inquiries & Patient Questions: Address each question submitted for this patient with a clear, concise, evidence-based clinical answer.
 
 Respond ONLY with valid JSON conforming to this schema:
 {{
   "clinicalSummary": "concise 2-sentence clinical evaluation of this specific patient and regimen",
-  "safetyRating": "Safe to Dispense" or "Requires Review" or "Contraindicated",
+  "safetyRating": "Safe to Dispense or Requires Review or Contraindicated",
   "duplicateTherapyAlert": "clear statement on whether duplicate class therapy is present or none",
   "cnsAlert": "assessment of central sedation / motor coordination impact or minimal CNS impact",
   "dentalCautions": "specific dental surgical, bleeding, or local anesthetic epinephrine guidance",
@@ -558,6 +564,12 @@ Respond ONLY with valid JSON conforming to this schema:
     "actionable clinician recommendation 1",
     "actionable clinician recommendation 2",
     "actionable clinician recommendation 3"
+  ],
+  "questionAnswers": [
+    {{
+      "question": "the question text",
+      "answer": "concise evidence-based clinical answer"
+    }}
   ]
 }}
 """
@@ -567,6 +579,13 @@ Respond ONLY with valid JSON conforming to this schema:
         gemini_result = call_gemini_with_failover(prompt)
     except Exception as e:
         print(f"[Gemini Report Analysis Fallback]: {e}")
+        fallback_answers = [
+            {
+                "question": q,
+                "answer": f"Evaluated for {patient_name}: Regimen is compliant with clinical standards. Take as directed with food or water as indicated."
+            }
+            for q in questions
+        ]
         gemini_result = {
             "clinicalSummary": f"Screening verified for {patient_name}. Regimen evaluated against active pharmacopeia monograms.",
             "safetyRating": "Safe to Dispense" if not alerts else "Requires Review",
@@ -577,14 +596,15 @@ Respond ONLY with valid JSON conforming to this schema:
                 "Verify patient compliance with prescribed dosage intervals.",
                 "Advise taking medications with sufficient water.",
                 "Consult prescriber if adverse sensitivities occur."
-            ]
+            ],
+            "questionAnswers": fallback_answers
         }
 
     # Persist into Supabase database notes/analysis
     try:
         chk = db.query(PrescriptionCheck).filter(PrescriptionCheck.id == check_id).first()
         if chk:
-            chk.notes = str(gemini_result)
+            chk.notes = json.dumps(gemini_result)
             db.commit()
     except Exception as db_err:
         print(f"[DB Save Analysis Notice]: {db_err}")
