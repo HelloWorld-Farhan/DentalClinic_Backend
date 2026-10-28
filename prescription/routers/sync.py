@@ -187,9 +187,9 @@ def batch_push_user_data(
             existing.notes = c.get("notes") or existing.notes
             existing.pdf_filename = c.get("pdfFilename") or existing.pdf_filename
             existing.pdf_url = c.get("pdfUrl") or existing.pdf_url
-        existing.source_document_url = c.get("sourceDocumentUrl") or existing.source_document_url
-        existing.source_document_name = c.get("sourceDocumentName") or existing.source_document_name
-        existing.source_type = c.get("sourceType") or existing.source_type
+            existing.source_document_url = c.get("sourceDocumentUrl") or existing.source_document_url
+            existing.source_document_name = c.get("sourceDocumentName") or existing.source_document_name
+            existing.source_type = c.get("sourceType") or existing.source_type
         else:
             db.add(
                 PrescriptionCheck(
@@ -340,6 +340,9 @@ def save_single_check(payload: Dict[str, Any] = Body(...), db: Session = Depends
         existing.notes = c.get("notes") or existing.notes
         existing.pdf_filename = c.get("pdfFilename") or existing.pdf_filename
         existing.pdf_url = c.get("pdfUrl") or existing.pdf_url
+        existing.source_document_url = c.get("sourceDocumentUrl") or existing.source_document_url
+        existing.source_document_name = c.get("sourceDocumentName") or existing.source_document_name
+        existing.source_type = c.get("sourceType") or existing.source_type
     else:
         existing = PrescriptionCheck(
             id=cid,
@@ -362,6 +365,38 @@ def save_single_check(payload: Dict[str, Any] = Body(...), db: Session = Depends
 
     db.commit()
     return {"status": "success", "id": cid}
+
+@router.delete("/check/{check_id}")
+def delete_single_check(check_id: str, email: str = Query(..., description="Clinician email"), db: Session = Depends(get_db)):
+    norm_email = clean_email(email)
+    chk = db.query(PrescriptionCheck).filter(PrescriptionCheck.id == check_id, PrescriptionCheck.user_email == norm_email).first()
+    if not chk:
+        chk = db.query(PrescriptionCheck).filter(PrescriptionCheck.id == check_id).first()
+    if chk:
+        db.delete(chk)
+        db.commit()
+        return {"status": "success", "deletedId": check_id}
+    return {"status": "not_found", "message": f"Check {check_id} not found"}
+
+@router.delete("/all-checks")
+def clear_all_checks_and_audits(email: str = Query(..., description="Clinician email"), db: Session = Depends(get_db)):
+    norm_email = clean_email(email)
+    del_checks = db.query(PrescriptionCheck).filter(PrescriptionCheck.user_email == norm_email).delete()
+    del_audits = db.query(AuditLog).filter(AuditLog.user_email == norm_email).delete()
+    db.commit()
+    return {"status": "success", "deletedChecks": del_checks, "deletedAudits": del_audits}
+
+@router.delete("/audit-log/{log_id}")
+def delete_single_audit_log(log_id: str, email: str = Query(..., description="Clinician email"), db: Session = Depends(get_db)):
+    norm_email = clean_email(email)
+    log = db.query(AuditLog).filter(AuditLog.id == log_id, AuditLog.user_email == norm_email).first()
+    if not log:
+        log = db.query(AuditLog).filter(AuditLog.id == log_id).first()
+    if log:
+        db.delete(log)
+        db.commit()
+        return {"status": "success", "deletedId": log_id}
+    return {"status": "not_found", "message": f"Audit log {log_id} not found"}
 
 @router.post("/audit-log")
 def save_single_audit_log(payload: Dict[str, Any] = Body(...), db: Session = Depends(get_db)):
