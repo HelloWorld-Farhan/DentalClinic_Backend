@@ -30,7 +30,8 @@ from ..schemas import (
     RevokeSessionRequest,
     SessionItem,
     SessionListResponse,
-    ReportEmailRequest
+    ReportEmailRequest,
+    AuditEmailRequest
 )
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Prescription Authentication"])
@@ -1283,6 +1284,8 @@ def send_report_email(req: ReportEmailRequest):
         "alerts_summary": req.alerts_summary,
         "alerts_count": req.alerts_count,
         "portal_url": req.portal_url,
+        "download_url": req.download_url or req.portal_url,
+        "pdf_filename": req.pdf_filename or f"SmileClinic_CDS_Report_{req.report_id}.pdf",
         "notary_hash": req.notary_hash,
     }
     subject = f"Smile Clinic — 2-Page CDS Verification Report [{req.report_id}]"
@@ -1291,5 +1294,32 @@ def send_report_email(req: ReportEmailRequest):
         "status": "success" if delivered else "sent_local",
         "message": f"Clinical CDS verification report dispatched to {req.to_email}",
         "report_id": req.report_id,
+        "delivered": delivered
+    }
+
+@router.post("/send-audit-email")
+def send_audit_email(req: AuditEmailRequest):
+    """
+    Sends certified HIPAA Audit Trail Export to clinician email.
+    """
+    from datetime import datetime, timezone
+    utc_now = req.timestamp_utc or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    filename = req.filename or f"SmileClinic_HIPAA_Audit_{req.export_format.lower()}_{int(datetime.now().timestamp())}.{req.export_format.lower()}"
+    context = {
+        "clinician_name": req.clinician_name,
+        "export_format": req.export_format.upper(),
+        "records_count": req.records_count,
+        "time_scope": req.time_scope,
+        "timestamp_utc": utc_now,
+        "notary_hash": req.notary_hash,
+        "download_url": req.download_url or "https://prescription-dentalclinic.pages.dev/audit",
+        "filename": filename,
+    }
+    subject = f"Smile Clinic — HIPAA Audit Trail Export [{req.export_format.upper()}]"
+    delivered = send_transactional_email(req.to_email, subject, "audit_trail_export_email.html", context)
+    return {
+        "status": "success" if delivered else "sent_local",
+        "message": f"HIPAA audit trail export dispatched to {req.to_email}",
+        "filename": filename,
         "delivered": delivered
     }

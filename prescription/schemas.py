@@ -205,7 +205,28 @@ class ReportEmailRequest(BaseModel):
     alerts_summary: Optional[str] = 'No Contraindicated Interactions Detected.'
     alerts_count: Optional[int] = 0
     portal_url: Optional[str] = 'https://prescription-dentalclinic.pages.dev/report'
+    download_url: Optional[str] = None
+    pdf_filename: Optional[str] = None
     notary_hash: Optional[str] = 'SHA256-4f8b9e892c21ad8310c8ff0e34a7812bc88'
+
+    @field_validator('to_email')
+    @classmethod
+    def validate_to_email(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not EMAIL_REGEX.match(clean):
+            raise ValueError('Invalid email address format.')
+        return clean
+
+class AuditEmailRequest(BaseModel):
+    to_email: str
+    clinician_name: Optional[str] = 'Active Clinician'
+    export_format: Optional[str] = 'PDF'
+    records_count: Optional[int] = 0
+    time_scope: Optional[str] = 'All History'
+    timestamp_utc: Optional[str] = None
+    notary_hash: Optional[str] = 'SHA256-4f8b9e892c21ad8310c8ff0e34a7812bc88'
+    download_url: Optional[str] = None
+    filename: Optional[str] = None
 
     @field_validator('to_email')
     @classmethod
