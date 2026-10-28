@@ -393,3 +393,4 @@ def generate_2page_cds_pdf(data: Dict[str, Any]) -> bytes:
     doc.build(story)
     buffer.seek(0)
     return buffer.getvalue()
+
