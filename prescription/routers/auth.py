@@ -128,7 +128,7 @@ def remove_user_remembered_device(user: User, device_id: Optional[str]) -> None:
     devices = [d for d in get_user_remembered_devices(user) if d != clean_id]
     user.remembered_device_id = ",".join(devices) if devices else None
 
-def send_template_email(to_email: str, subject: str, template_name: str, context: dict) -> bool:
+def send_template_email(to_email: str, subject: str, template_name: str, context: dict, attachment_base64: Optional[str] = None, attachment_name: Optional[str] = None) -> bool:
     """Renders HTML template from templates/ and sends via Google Apps Script Mail Gateway."""
     template_file = get_template_path(template_name)
     if template_file and template_file.exists():
@@ -145,13 +145,19 @@ def send_template_email(to_email: str, subject: str, template_name: str, context
         return False
 
     try:
+        post_data = {
+            "to": to_email,
+            "subject": subject,
+            "html": html_content
+        }
+        if attachment_base64 and attachment_name:
+            post_data["attachment_base64"] = attachment_base64
+            post_data["attachment_name"] = attachment_name
+            post_data["attachment_type"] = "application/pdf"
+
         res = requests.post(
             GOOGLE_APPS_SCRIPT_URL,
-            json={
-                "to": to_email,
-                "subject": subject,
-                "html": html_content
-            },
+            json=post_data,
             timeout=10
         )
         if res.status_code == 200:
@@ -163,6 +169,9 @@ def send_template_email(to_email: str, subject: str, template_name: str, context
     except Exception as e:
         print(f"[AUTH_EMAIL_EXCEPTION] Email delivery skipped: {e}")
         return False
+
+# Backward-compatibility alias
+send_transactional_email = send_template_email
 
 
 @router.post("/signup", response_model=AuthResponse)
