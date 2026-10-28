@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smile Clinic — HIPAA Audit Trail Export</title>
+  <style>
+    @media only screen and (max-width: 600px) {
+      .email-container {
+        width: 100% !important;
+        padding: 12px !important;
+      }
+      .header-cell {
+        padding: 20px 20px !important;
+      }
+      .content-cell {
+        padding: 24px 20px !important;
+      }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #181c1e;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f1f5f9; padding: 40px 10px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card -->
+        <table role="presentation" class="email-container" width="580" cellspacing="0" cellpadding="0" border="0" style="max-width: 580px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 92, 101, 0.08), 0 8px 10px -6px rgba(0, 92, 101, 0.04); border: 1px solid #e2e8f0;">
+          
+          <!-- Top Brand Accent Bar -->
+          <tr>
+            <td style="height: 4px; background: linear-gradient(90deg, #059669 0%, #0d9488 50%, #005c65 100%); line-height: 4px; font-size: 4px;">&nbsp;</td>
+          </tr>
+
+          <!-- Modern Brand Header -->
+          <tr>
+            <td class="header-cell" style="padding: 24px 32px; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td width="42" valign="middle">
+                    <div style="width: 40px; height: 40px; background-color: #e6f6f8; border: 1px solid #b2e7ed; border-radius: 10px; text-align: center; line-height: 40px; overflow: hidden;">
+                      <img src="https://img.icons8.com/fluency/96/shield.png" width="24" height="24" alt="🛡️" style="display: inline-block; vertical-align: middle; border: 0;" />
+                    </div>
+                  </td>
+                  <td style="padding-left: 12px;" valign="middle">
+                    <span style="font-size: 18px; font-weight: 800; color: #005c65; letter-spacing: -0.3px; display: block; line-height: 1.2;">Smile Clinic</span>
+                    <span style="font-size: 11px; font-weight: 600; color: #0d9488; text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-top: 2px;">HIPAA §164.514 Safe Harbor Extraction</span>
+                  </td>
+                  <td align="right" valign="middle">
+                    <span style="display: inline-block; background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
+                      {{ export_format }}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td class="content-cell" style="padding: 28px 32px;">
+              <h2 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 700; color: #0f172a; letter-spacing: -0.2px;">
+                HIPAA Audit Trail Export
+              </h2>
+              <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+                Hello <strong>{{ clinician_name }}</strong>,
+              </p>
+              <p style="margin: 0 0 20px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+                Attached below is your certified <strong>HIPAA Audit Trail Export</strong> containing <strong style="color: #005c65;">{{ records_count }} clinical screening records</strong> for scope <strong>{{ time_scope }}</strong>.
+              </p>
+
+              <!-- Essential Metadata Summary Pill -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 24px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; width: 50%;">
+                    <span style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">Exported Events</span><br>
+                    <strong style="font-size: 13px; color: #0f172a;">{{ records_count }} Records ({{ export_format }})</strong>
+                  </td>
+                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; width: 50%;">
+                    <span style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">Time Scope</span><br>
+                    <strong style="font-size: 13px; color: #0f172a;">{{ time_scope }}</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; width: 50%;">
+                    <span style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">Generated Timestamp</span><br>
+                    <strong style="font-size: 12px; color: #0f172a; font-family: monospace;">{{ timestamp_utc }}</strong>
+                  </td>
+                  <td style="padding: 12px 16px; width: 50%;">
+                    <span style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">De-identification</span><br>
+                    <strong style="font-size: 12px; color: #059669;">§164.514 Safe Harbor Certified</strong>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Prominent Download / Access Details -->
+              <div style="background-color: #f0fdfa; border: 1px solid #99f6e4; border-radius: 14px; padding: 22px 20px; text-align: center; margin-bottom: 18px;">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto 12px auto;">
+                  <tr>
+                    <td style="border-radius: 10px; background-color: #005c65;">
+                      <a href="{{ download_url }}" target="_blank" download style="padding: 14px 28px; border-radius: 10px; font-size: 14px; font-weight: 700; color: #ffffff; text-decoration: none; display: inline-block;">
+                        &darr;&nbsp; Download Audit Export ({{ export_format }})
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+                <div style="font-size: 12px; font-weight: 700; color: #0f766e; margin-bottom: 4px;">
+                  &#128196; {{ filename }}
+                </div>
+                <div style="font-size: 11px; color: #115e59;">
+                  Encrypted Clinical Audit Extract &bull; Legally Binding Attestation
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Security Footer -->
+          <tr>
+            <td style="padding: 20px 32px; background-color: #f8fafc; border-top: 1px solid #f1f5f9; text-align: center;">
+              <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b; font-weight: 500;">
+                SHA256 Seal: <code style="font-family: monospace; color: #005c65;">{{ notary_hash }}</code>
+              </p>
+              <p style="margin: 0; font-size: 10px; color: #94a3b8; line-height: 1.4;">
+                &copy; 2026 Smile Clinic Healthcare Technologies &bull; Confidential Protected Health Information (45 CFR &sect; 164.514)
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
