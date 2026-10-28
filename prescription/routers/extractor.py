@@ -1,11 +1,13 @@
 import os
 import json
 import base64
+import zipfile
+import io
+import xml.etree.ElementTree as ET
 import urllib.request
 import urllib.error
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/prescriptions", tags=["Prescription AI Extraction"])
 
@@ -14,11 +16,7 @@ DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
 FALLBACK_MODELS = [DEFAULT_MODEL, "gemini-3.8-flash", "gemini-3.1-pro-preview"]
 
 def get_active_keys() -> List[str]:
-    """
-    Collects all active Gemini keys from environment variables:
-    1. GEMINI_API_KEYS (comma-separated list)
-    2. GEMINI_KEY_1 ... GEMINI_KEY_15
-    """
+    """Collects all active Gemini keys from environment variables."""
     keys = []
     comma_keys = os.getenv("GEMINI_API_KEYS", "")
     if comma_keys:
@@ -34,15 +32,10 @@ def get_active_keys() -> List[str]:
 
     return keys
 
-# Maintain an in-memory cursor for round-robin rotation across requests
 _current_key_index = 0
 
 def call_gemini_with_failover(prompt: str, inline_data: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
-    """
-    Executes a Gemini generateContent call with automatic failover rotation.
-    If a key hits a 429 rate limit or quota exhaustion, it immediately rotates
-    to the next active key.
-    """
+    """Executes a Gemini generateContent call with automatic 14-key failover rotation."""
     global _current_key_index
     keys = get_active_keys()
     if not keys:
@@ -67,7 +60,6 @@ def call_gemini_with_failover(prompt: str, inline_data: Optional[Dict[str, str]]
     total_keys = len(keys)
     last_error = "Unknown error"
 
-    # Try every active key in round-robin sequence
     for attempt in range(total_keys):
         key_idx = (_current_key_index + attempt) % total_keys
         api_key = keys[key_idx]
@@ -88,19 +80,17 @@ def call_gemini_with_failover(prompt: str, inline_data: Optional[Dict[str, str]]
                         .get("parts", [{}])[0]
                         .get("text", "")
                     )
-                    # Advance global index to load-balance keys across requests
                     _current_key_index = (key_idx + 1) % total_keys
                     return json.loads(cand_text)
             except urllib.error.HTTPError as e:
                 err_text = e.read().decode("utf-8", errors="ignore")
                 last_error = f"Key #{key_idx + 1} HTTP {e.code}: {err_text}"
-                print(f"[Gemini Warning] Key #{key_idx + 1} ({model_name}) error: {e.code}. Attempting next...")
-                # If 429 (rate limit) or 403/400 key error, break to next key
+                print(f"[Gemini Warning] Key #{key_idx + 1} ({model_name}) error: {e.code}. Rotating...")
                 if e.code in (429, 403, 400):
                     break
             except Exception as e:
                 last_error = f"Key #{key_idx + 1} Exception: {str(e)}"
-                print(f"[Gemini Warning] Key #{key_idx + 1} connection error: {e}. Rotating...")
+                print(f"[Gemini Warning] Key #{key_idx + 1} error: {e}. Rotating...")
                 break
 
     raise HTTPException(
@@ -108,37 +98,112 @@ def call_gemini_with_failover(prompt: str, inline_data: Optional[Dict[str, str]]
         detail=f"All {total_keys} Gemini API keys exhausted or rate-limited. Last error: {last_error}"
     )
 
+def extract_docx_content(content: bytes) -> Tuple[str, Optional[Tuple[str, str]]]:
+    """
+    Extracts text from Word DOCX XML, and checks for any embedded scanned prescription images.
+    Returns (extracted_text, (mime_type, base64_image_data) | None).
+    """
+    texts = []
+    embedded_media = None
+    try:
+        with zipfile.ZipFile(io.BytesIO(content)) as z:
+            if "word/document.xml" in z.namelist():
+                xml_content = z.read("word/document.xml")
+                tree = ET.fromstring(xml_content)
+                nodes = [node.text for node in tree.iter() if node.text]
+                if nodes:
+                    texts.append("\n".join(nodes))
+
+            # Look for embedded prescription slip scans
+            for name in z.namelist():
+                if name.startswith("word/media/") and name.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+                    img_bytes = z.read(name)
+                    mime = "image/png" if name.lower().endswith(".png") else "image/jpeg"
+                    embedded_media = (mime, base64.b64encode(img_bytes).decode("utf-8"))
+                    break
+    except Exception as e:
+        print(f"[DOCX Parse Warning] {e}")
+
+    return "\n".join(texts), embedded_media
+
+def decode_text_content(content: bytes) -> str:
+    """Decodes plain text or CSV data across common clinical encodings."""
+    for enc in ["utf-8-sig", "utf-8", "latin-1", "cp1252"]:
+        try:
+            return content.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return content.decode("utf-8", errors="ignore")
+
+def prepare_file_for_gemini(filename: str, content: bytes, content_type: str = "") -> Tuple[Optional[Dict[str, str]], str]:
+    """
+    Universal multi-format dispatcher for PDF, Image, Camera JPEG, CSV, and Word documents.
+    Returns (inline_data_dict_or_None, supplementary_text).
+    """
+    filename_lower = filename.lower()
+    inline_data = None
+    extra_text = ""
+
+    # 1. PDF Documents
+    if filename_lower.endswith(".pdf") or "pdf" in content_type or b"%PDF" in content[:10]:
+        inline_data = {
+            "mimeType": "application/pdf",
+            "data": base64.b64encode(content).decode("utf-8")
+        }
+
+    # 2. Images & Camera Photos
+    elif filename_lower.endswith((".jpg", ".jpeg")) or "jpeg" in content_type:
+        inline_data = {
+            "mimeType": "image/jpeg",
+            "data": base64.b64encode(content).decode("utf-8")
+        }
+    elif filename_lower.endswith(".png") or "png" in content_type:
+        inline_data = {
+            "mimeType": "image/png",
+            "data": base64.b64encode(content).decode("utf-8")
+        }
+    elif filename_lower.endswith(".webp") or "webp" in content_type:
+        inline_data = {
+            "mimeType": "image/webp",
+            "data": base64.b64encode(content).decode("utf-8")
+        }
+
+    # 3. Word Documents (.docx / .doc)
+    elif filename_lower.endswith((".docx", ".doc")):
+        text, embedded = extract_docx_content(content)
+        extra_text = f"\n[Extracted Word Document Text]:\n{text}" if text else ""
+        if embedded:
+            mime, b64_img = embedded
+            inline_data = {"mimeType": mime, "data": b64_img}
+
+    # 4. CSV & Spreadsheet Files
+    elif filename_lower.endswith((".csv", ".tsv", ".txt")) or "csv" in content_type or "text/" in content_type:
+        text = decode_text_content(content)
+        extra_text = f"\n[Tabular / CSV Document Data]:\n{text}"
+
+    # Default fallback: check magic bytes
+    else:
+        if b"%PDF" in content[:10]:
+            inline_data = {"mimeType": "application/pdf", "data": base64.b64encode(content).decode("utf-8")}
+        else:
+            inline_data = {"mimeType": "image/jpeg", "data": base64.b64encode(content).decode("utf-8")}
+
+    return inline_data, extra_text
+
 @router.post("/extract")
 async def extract_prescription(file: UploadFile = File(...)):
     """
-    Extracts structured prescription data from uploaded PDFs, PNG, JPG, or WEBP images.
-    Returns normalized patient metadata and individual medications.
+    Universal multi-format prescription extraction endpoint for PDF, Image, Camera photo, CSV, and Word documents.
     """
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
-    filename_lower = file.filename.lower()
-    content_type = file.content_type or ""
-
-    # Determine MIME type
-    if filename_lower.endswith(".pdf") or "pdf" in content_type:
-        mime_type = "application/pdf"
-    elif filename_lower.endswith((".jpg", ".jpeg")) or "jpeg" in content_type:
-        mime_type = "image/jpeg"
-    elif filename_lower.endswith(".png") or "png" in content_type:
-        mime_type = "image/png"
-    elif filename_lower.endswith(".webp") or "webp" in content_type:
-        mime_type = "image/webp"
-    else:
-        # Default binary fallback
-        mime_type = "application/pdf" if b"%PDF" in content[:10] else "image/jpeg"
-
-    b64_data = base64.b64encode(content).decode("utf-8")
+    inline_data, extra_text = prepare_file_for_gemini(file.filename, content, file.content_type or "")
 
     prompt = (
         "You are an expert clinical pharmacologist and medical document parser. "
-        "Analyze this medical prescription or clinical document with utmost clinical precision. "
+        "Analyze this medical prescription or clinical document (which may be a PDF, handwriting scan, camera photo, Word document, or CSV table). "
         "Extract doctor handwriting, abbreviations (e.g. TID, BID, PO, PRN, OD, HS, cap, tab, ℞), "
         "and normalize all dates to YYYY-MM-DD or standard readable formats.\n\n"
         "Generate relevant clinical decision support rules & contraindication safety warnings for the prescribed medications "
@@ -180,10 +245,13 @@ async def extract_prescription(file: UploadFile = File(...)):
         "}"
     )
 
+    if extra_text:
+        prompt += f"\n\n{extra_text}"
+
     try:
         extracted = call_gemini_with_failover(
             prompt=prompt,
-            inline_data={"mimeType": mime_type, "data": b64_data}
+            inline_data=inline_data
         )
         return {
             "status": "success",
@@ -200,33 +268,17 @@ async def extract_prescription(file: UploadFile = File(...)):
 @router.post("/extract-rules")
 async def extract_clinical_rules(file: UploadFile = File(...)):
     """
-    Extracts clinical decision support rules (drug interactions, contraindications)
-    and any detected medicines from medical documents, pharmacology monographs,
-    prescriptions, or guidelines.
+    Universal multi-format clinical rules extraction endpoint for PDF, Image, Camera photo, CSV, and Word documents.
     """
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
-    filename_lower = file.filename.lower()
-    content_type = file.content_type or ""
-
-    if filename_lower.endswith(".pdf") or "pdf" in content_type:
-        mime_type = "application/pdf"
-    elif filename_lower.endswith((".jpg", ".jpeg")):
-        mime_type = "image/jpeg"
-    elif filename_lower.endswith(".png"):
-        mime_type = "image/png"
-    elif filename_lower.endswith(".webp"):
-        mime_type = "image/webp"
-    else:
-        mime_type = "application/pdf" if b"%PDF" in content[:10] else "image/jpeg"
-
-    b64_data = base64.b64encode(content).decode("utf-8")
+    inline_data, extra_text = prepare_file_for_gemini(file.filename, content, file.content_type or "")
 
     prompt = (
         "You are an expert clinical pharmacologist. "
-        "Analyze this document (which may be a prescription slip, clinical protocol, or pharmacology guide). "
+        "Analyze this document (which may be a prescription slip, clinical protocol, pharmacology guide, CSV rule matrix, or Word document). "
         "Extract all prescribed medications, and extract/generate all drug-drug interactions, "
         "drug-allergy contraindications, and clinical dosing rules associated with them.\n\n"
         "Return ONLY a valid JSON object with this exact structure:\n"
@@ -255,10 +307,13 @@ async def extract_clinical_rules(file: UploadFile = File(...)):
         "}"
     )
 
+    if extra_text:
+        prompt += f"\n\n{extra_text}"
+
     try:
         extracted = call_gemini_with_failover(
             prompt=prompt,
-            inline_data={"mimeType": mime_type, "data": b64_data}
+            inline_data=inline_data
         )
         return {
             "status": "success",
@@ -270,4 +325,3 @@ async def extract_clinical_rules(file: UploadFile = File(...)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Rules extraction failed: {str(e)}")
-
