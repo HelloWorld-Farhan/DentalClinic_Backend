@@ -683,7 +683,7 @@ def get_or_generate_report_pdf(
     try:
         s3 = get_s3_client()
         if s3:
-            file_key = f"reports/{norm_email}/{report_id}_{pdf_filename}"
+            file_key = f"users/{norm_email}/report/{report_id}_{pdf_filename}"
             s3.put_object(
                 Bucket=R2_BUCKET_NAME,
                 Key=file_key,
