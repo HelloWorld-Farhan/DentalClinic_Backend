@@ -190,3 +190,27 @@ class SessionListResponse(BaseModel):
     status: str
     sessions: List[SessionItem]
     history: List[SessionItem]
+
+class ReportEmailRequest(BaseModel):
+    to_email: str
+    report_id: Optional[str] = 'REP-2026-0419-892'
+    patient_name: Optional[str] = 'Anonymous Patient'
+    patient_mrn: Optional[str] = 'PT-MRN-9281'
+    clinician_name: Optional[str] = 'Active Clinician'
+    clinician_npi: Optional[str] = 'NPI-1092837482'
+    overall_status: Optional[str] = 'Safe to Dispense'
+    timestamp_utc: Optional[str] = None
+    candidate_drugs: Optional[str] = 'Standard Dental Therapy'
+    rx_count: Optional[int] = 1
+    alerts_summary: Optional[str] = 'No Contraindicated Interactions Detected.'
+    alerts_count: Optional[int] = 0
+    portal_url: Optional[str] = 'https://prescription-dentalclinic.pages.dev/report'
+    notary_hash: Optional[str] = 'SHA256-4f8b9e892c21ad8310c8ff0e34a7812bc88'
+
+    @field_validator('to_email')
+    @classmethod
+    def validate_to_email(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not EMAIL_REGEX.match(clean):
+            raise ValueError('Invalid email address format.')
+        return clean

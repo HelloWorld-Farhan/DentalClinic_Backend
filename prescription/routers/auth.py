@@ -29,7 +29,8 @@ from ..schemas import (
     RecordSessionRequest,
     RevokeSessionRequest,
     SessionItem,
-    SessionListResponse
+    SessionListResponse,
+    ReportEmailRequest
 )
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Prescription Authentication"])
@@ -1262,6 +1263,33 @@ def get_session_status(email: str, device_id: str, db: Session = Depends(get_db)
 
     return {"status": "success", "valid": True, "active": True, "revoked": False}
 
-
-
-
+@router.post("/send-report-email")
+def send_report_email(req: ReportEmailRequest):
+    """
+    Sends certified 2-page Clinical Decision Support (CDS) Verification Report to clinician email.
+    """
+    from datetime import datetime, timezone
+    utc_now = req.timestamp_utc or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    context = {
+        "report_id": req.report_id,
+        "patient_name": req.patient_name,
+        "patient_mrn": req.patient_mrn,
+        "clinician_name": req.clinician_name,
+        "clinician_npi": req.clinician_npi,
+        "overall_status": req.overall_status,
+        "timestamp_utc": utc_now,
+        "candidate_drugs": req.candidate_drugs,
+        "rx_count": req.rx_count,
+        "alerts_summary": req.alerts_summary,
+        "alerts_count": req.alerts_count,
+        "portal_url": req.portal_url,
+        "notary_hash": req.notary_hash,
+    }
+    subject = f"Smile Clinic — 2-Page CDS Verification Report [{req.report_id}]"
+    delivered = send_transactional_email(req.to_email, subject, "clinical_cds_report_email.html", context)
+    return {
+        "status": "success" if delivered else "sent_local",
+        "message": f"Clinical CDS verification report dispatched to {req.to_email}",
+        "report_id": req.report_id,
+        "delivered": delivered
+    }
