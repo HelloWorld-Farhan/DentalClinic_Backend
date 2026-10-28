@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, Boolean, DateTime, Integer, Text
+from sqlalchemy import Column, String, Boolean, DateTime, Integer, Text, BigInteger, JSON
 from .database import Base
 
 class User(Base):
@@ -55,3 +55,86 @@ class UserSession(Base):
     details = Column(String(500), nullable=True)
     last_active = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class PrescriptionCheck(Base):
+    __tablename__ = "prescription_checks"
+
+    id = Column(String(64), primary_key=True)  # e.g. CHK-2026-4372
+    user_email = Column(String(255), index=True, nullable=False)
+    patient_id = Column(String(64), nullable=True)
+    patient_name = Column(String(255), nullable=True)
+    patient_mrn = Column(String(100), nullable=True)
+    prescriptions = Column(JSON, nullable=True)  # List of prescribed items
+    alerts = Column(JSON, nullable=True)         # List of drug interaction warnings
+    highest_severity = Column(String(30), default="clear")
+    reviewer_name = Column(String(120), nullable=True)
+    status = Column(String(50), default="safe")
+    pdf_filename = Column(String(255), nullable=True)
+    pdf_url = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    digital_seal = Column(Text, nullable=True)
+    timestamp_ms = Column(BigInteger, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(String(64), primary_key=True)  # e.g. aud-17931...
+    user_email = Column(String(255), index=True, nullable=False)
+    action = Column(String(100), nullable=False)
+    clinician_name = Column(String(120), nullable=True)
+    patient_mrn = Column(String(100), nullable=True)
+    event_details = Column(Text, nullable=True)
+    severity = Column(String(30), default="SAFE")
+    pdf_filename = Column(String(255), nullable=True)
+    pdf_url = Column(Text, nullable=True)
+    inner_data = Column(JSON, nullable=True)
+    hash = Column(String(128), nullable=True)
+    timestamp_ms = Column(BigInteger, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class UploadedDocument(Base):
+    __tablename__ = "uploaded_documents"
+
+    id = Column(String(64), primary_key=True)  # e.g. doc-17931...
+    user_email = Column(String(255), index=True, nullable=False)
+    filename = Column(String(255), nullable=False)
+    file_type = Column(String(100), nullable=True)
+    file_size = Column(Integer, default=0)
+    storage_url = Column(Text, nullable=True)
+    author_name = Column(String(120), nullable=True)
+    extracted_rules_count = Column(Integer, default=0)
+    status = Column(String(30), default="stored")
+    uploaded_at = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class ClinicalRule(Base):
+    __tablename__ = "clinical_rules"
+
+    id = Column(String(64), primary_key=True)  # e.g. rule-17931...
+    user_email = Column(String(255), index=True, nullable=False)
+    drug_a = Column(String(120), nullable=False)
+    drug_b = Column(String(120), nullable=False)
+    category = Column(String(80), nullable=True)
+    severity = Column(String(30), default="moderate")
+    mechanism = Column(Text, nullable=True)
+    evidence = Column(String(80), default="Established")
+    source_file = Column(String(255), nullable=True)
+    active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class PatientRecord(Base):
+    __tablename__ = "patient_records"
+
+    id = Column(String(64), primary_key=True)  # e.g. pt-17931...
+    user_email = Column(String(255), index=True, nullable=False)
+    mrn = Column(String(100), nullable=True)
+    name = Column(String(120), nullable=False)
+    age = Column(Integer, nullable=True)
+    gender = Column(String(20), nullable=True)
+    allergies = Column(JSON, nullable=True)
+    conditions = Column(JSON, nullable=True)
+    current_medications = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
