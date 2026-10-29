@@ -109,9 +109,11 @@ def get_all_user_data(
         "auditLogs": [
             {
                 "id": a.id,
+                "checkId": (a.inner_data or {}).get("checkId") if isinstance(a.inner_data, dict) else None,
                 "action": a.action,
                 "clinicianName": a.clinician_name,
                 "patientMrn": a.patient_mrn,
+                "patientName": (a.inner_data or {}).get("patientName") if isinstance(a.inner_data, dict) else a.patient_mrn,
                 "eventDetails": a.event_details,
                 "severity": a.severity,
                 "pdfFilename": a.pdf_filename,

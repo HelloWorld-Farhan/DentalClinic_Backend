@@ -428,11 +428,16 @@ async def execute_prescription_safety_check(
                 hash=digital_seal,
                 timestamp_ms=now_ms,
                 inner_data={
+                    "checkId": check_id,
+                    "patientName": patient.get("name"),
                     "prescriptions": evaluated_meds,
                     "alerts": alerts,
                     "digital_seal": digital_seal,
                     "overall_status": overall_status,
-                    "clinical_inquiries": inquiry_answers
+                    "clinical_inquiries": inquiry_answers,
+                    "sourceDocumentUrl": payload.get("source_document_url"),
+                    "sourceDocumentName": payload.get("source_document_name"),
+                    "sourceType": payload.get("source_type", "upload")
                 }
             )
             db.merge(audit_log)
