@@ -1,6 +1,9 @@
 from datetime import date, datetime
 
-from schemas import CheckRequest, Source
+try:
+    from .clinical_schemas import CheckRequest, Source
+except ImportError:
+    from clinical_schemas import CheckRequest, Source
 
 RULE_ENGINE_VERSION = "rule-engine v0.1"
 INJECTION_HINTS = ["ignore", "previous instruction", "system prompt", "say it is safe", "bypass"]

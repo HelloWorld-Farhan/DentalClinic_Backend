@@ -23,7 +23,7 @@ from .storage import get_s3_client, R2_BUCKET_NAME, R2_PUBLIC_URL
 
 # Check Engine helpers
 try:
-    from ..Check.rxnorm import normalize as rx_normalize
+    from ..clinical_engine import rxnorm_normalize as rx_normalize
 except Exception:
     def rx_normalize(name: str):
         return {"status": "unmatched", "ingredient": name}
