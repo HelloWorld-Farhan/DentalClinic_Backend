@@ -72,7 +72,7 @@ def call_gemini_with_failover(prompt: str, inline_data: Optional[Dict[str, str]]
                 headers={"Content-Type": "application/json"}
             )
             try:
-                with urllib.request.urlopen(req, timeout=4) as res:
+                with urllib.request.urlopen(req, timeout=10) as res:
                     res_body = json.loads(res.read().decode("utf-8"))
                     cand_text = (
                         res_body.get("candidates", [{}])[0]
@@ -135,6 +135,66 @@ def decode_text_content(content: bytes) -> str:
             continue
     return content.decode("utf-8", errors="ignore")
 
+def extract_pdf_content(content: bytes) -> Tuple[Optional[Dict[str, str]], str]:
+    """
+    Intelligently extracts text or rendered images from PDF files.
+    Tries PyMuPDF (fitz) or pypdf to extract clean text. If text is sparse (scanned document),
+    extracts embedded page images or renders page 1 to JPEG.
+    """
+    extracted_text = ""
+    inline_data = None
+
+    # Step 1: Try PyMuPDF (fitz)
+    try:
+        import fitz
+        doc = fitz.open(stream=content, filetype="pdf")
+        for page in doc:
+            extracted_text += page.get_text() + "\n"
+        
+        if len(extracted_text.strip()) > 20:
+            return None, f"\n[Extracted Digital PDF Prescription Text]:\n{extracted_text.strip()}"
+
+        if len(doc) > 0:
+            page = doc[0]
+            pix = page.get_pixmap(dpi=150)
+            img_bytes = pix.tobytes("jpeg")
+            inline_data = {
+                "mimeType": "image/jpeg",
+                "data": base64.b64encode(img_bytes).decode("utf-8")
+            }
+            return inline_data, extracted_text.strip()
+    except Exception as e:
+        print(f"[PyMuPDF Warning] {e}")
+
+    # Step 2: Fallback to pypdf
+    try:
+        import pypdf
+        reader = pypdf.PdfReader(io.BytesIO(content))
+        for p in reader.pages:
+            extracted_text += (p.extract_text() or "") + "\n"
+
+        if len(extracted_text.strip()) > 20:
+            return None, f"\n[Extracted Digital PDF Prescription Text]:\n{extracted_text.strip()}"
+
+        for p in reader.pages:
+            if hasattr(p, "images") and p.images:
+                img_obj = p.images[0]
+                mime = "image/png" if img_obj.name.lower().endswith(".png") else "image/jpeg"
+                inline_data = {
+                    "mimeType": mime,
+                    "data": base64.b64encode(img_obj.data).decode("utf-8")
+                }
+                return inline_data, extracted_text.strip()
+    except Exception as e:
+        print(f"[pypdf Warning] {e}")
+
+    # Step 3: Raw PDF inline fallback
+    inline_data = {
+        "mimeType": "application/pdf",
+        "data": base64.b64encode(content).decode("utf-8")
+    }
+    return inline_data, extracted_text.strip()
+
 def prepare_file_for_gemini(filename: str, content: bytes, content_type: str = "") -> Tuple[Optional[Dict[str, str]], str]:
     """
     Universal multi-format dispatcher for PDF, Image, Camera JPEG, CSV, and Word documents.
@@ -144,12 +204,9 @@ def prepare_file_for_gemini(filename: str, content: bytes, content_type: str = "
     inline_data = None
     extra_text = ""
 
-    # 1. PDF Documents
+    # 1. PDF Documents (Intelligent text extraction + image rendering)
     if filename_lower.endswith(".pdf") or "pdf" in content_type or b"%PDF" in content[:10]:
-        inline_data = {
-            "mimeType": "application/pdf",
-            "data": base64.b64encode(content).decode("utf-8")
-        }
+        inline_data, extra_text = extract_pdf_content(content)
 
     # 2. Images & Camera Photos
     elif filename_lower.endswith((".jpg", ".jpeg")) or "jpeg" in content_type:

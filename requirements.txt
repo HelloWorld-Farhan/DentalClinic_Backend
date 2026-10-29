@@ -9,3 +9,5 @@ requests
 boto3
 python-multipart
 reportlab>=4.4.0
+pypdf>=4.0.0
+PyMuPDF>=1.23.0
