@@ -109,7 +109,9 @@ def get_all_user_data(
         "auditLogs": [
             {
                 "id": a.id,
-                "checkId": (a.inner_data or {}).get("checkId") if isinstance(a.inner_data, dict) else None,
+                "checkId": (a.inner_data or {}).get("checkId") if isinstance(a.inner_data, dict) and (a.inner_data or {}).get("checkId") else (
+                    re.search(r'(CHK-\d{4}-\d+|chk-\d+)', a.pdf_filename or '').group(1) if a.pdf_filename and re.search(r'(CHK-\d{4}-\d+|chk-\d+)', a.pdf_filename) else None
+                ),
                 "action": a.action,
                 "clinicianName": a.clinician_name,
                 "patientMrn": a.patient_mrn,
