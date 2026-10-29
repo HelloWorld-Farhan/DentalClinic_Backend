@@ -12,7 +12,7 @@ else:
     load_dotenv(override=False)
 
 from .database import engine, Base
-from .routers import auth, storage, extractor, sync
+from .routers import auth, storage, extractor, sync, checks
 
 # Auto-initialize database tables if not existing
 try:
@@ -52,6 +52,7 @@ app.include_router(auth.router)
 app.include_router(storage.router)
 app.include_router(extractor.router)
 app.include_router(sync.router)
+app.include_router(checks.router)
 
 @app.get("/")
 @app.get("/health")
