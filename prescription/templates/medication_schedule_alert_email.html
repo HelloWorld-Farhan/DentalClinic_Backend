@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smile Clinic — Medication Schedule & Safety Alert</title>
+  <style>
+    @media only screen and (max-width: 600px) {
+      .email-container {
+        width: 100% !important;
+        padding: 10px !important;
+      }
+      .header-cell, .content-cell {
+        padding: 20px 16px !important;
+      }
+      .time-col {
+        width: 75px !important;
+      }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #181c1e;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f1f5f9; padding: 30px 10px;">
+    <tr>
+      <td align="center">
+        <!-- Main Container -->
+        <table role="presentation" class="email-container" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 92, 101, 0.08); border: 1px solid #e2e8f0;">
+          
+          <!-- Top Gradient Accent -->
+          <tr>
+            <td style="height: 5px; background: linear-gradient(90deg, #0284c7 0%, #005c65 50%, #059669 100%); line-height: 5px; font-size: 5px;">&nbsp;</td>
+          </tr>
+
+          <!-- Header -->
+          <tr>
+            <td class="header-cell" style="padding: 24px 32px; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td width="42" valign="middle">
+                    <div style="width: 40px; height: 40px; background-color: #e6f6f8; border: 1px solid #b2e7ed; border-radius: 10px; text-align: center; line-height: 40px; overflow: hidden;">
+                      <img src="https://img.icons8.com/fluency/96/tooth.png" width="24" height="24" alt="🦷" style="display: inline-block; vertical-align: middle; border: 0;" />
+                    </div>
+                  </td>
+                  <td style="padding-left: 12px;" valign="middle">
+                    <span style="font-size: 18px; font-weight: 800; color: #005c65; letter-spacing: -0.3px; display: block; line-height: 1.2;">Smile Clinic</span>
+                    <span style="font-size: 11px; font-weight: 600; color: #0284c7; text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-top: 2px;">Medication Intake & Safety Schedule</span>
+                  </td>
+                  <td align="right" valign="middle">
+                    <span style="display: inline-block; background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
+                      Active Schedule
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Content Body -->
+          <tr>
+            <td class="content-cell" style="padding: 28px 32px;">
+              <h2 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 700; color: #0f172a;">Daily Medication Timing & Safety Guide</h2>
+              <p style="margin: 0 0 16px 0; font-size: 13px; line-height: 1.6; color: #475569;">
+                Hello <strong>{{ patient_name }}</strong>, below is your verified medication intake timetable extracted directly from your clinical prescription by <strong>{{ clinician_name }}</strong> on <strong>{{ schedule_date }}</strong>.
+              </p>
+
+              <!-- Patient Vitals & Summary Strip -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; margin-bottom: 22px;">
+                <tr>
+                  <td width="33%" valign="top">
+                    <span style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 700;">Patient / MRN</span><br>
+                    <strong style="font-size: 13px; color: #0f172a;">{{ patient_name }} ({{ patient_mrn }})</strong>
+                  </td>
+                  <td width="33%" valign="top">
+                    <span style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 700;">Prescription Check</span><br>
+                    <strong style="font-size: 13px; color: #005c65;">{{ check_number }}</strong>
+                  </td>
+                  <td width="33%" valign="top">
+                    <span style="font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 700;">Course End / Stop Date</span><br>
+                    <strong style="font-size: 13px; color: #c2410c;">{{ course_end_date }}</strong>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Medication Timetable Header -->
+              <div style="font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 10px; display: flex; align-items: center;">
+                ⏰ Daily Medication Timetable (When to Take Each Medicine):
+              </div>
+
+              <!-- Daily Intake Schedule Table -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-bottom: 24px; border-collapse: collapse;">
+                <thead>
+                  <tr style="background-color: #005c65; color: #ffffff; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <th style="padding: 10px 14px; width: 95px;">Scheduled Time</th>
+                    <th style="padding: 10px 14px;">Medication & Dosage</th>
+                    <th style="padding: 10px 14px;">Food Instructions</th>
+                    <th style="padding: 10px 14px; text-align: right;">Duration</th>
+                  </tr>
+                </thead>
+                <tbody style="font-size: 12px; color: #334155;">
+                  {{ medication_table_rows }}
+                </tbody>
+              </table>
+
+              <!-- Course Expiration Warning Notice -->
+              <div style="background-color: #fff7ed; border-left: 4px solid #ea580c; border-radius: 0 10px 10px 0; padding: 14px 18px; margin-bottom: 22px;">
+                <strong style="color: #9a3412; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">
+                  ⚠️ Course Duration & Completion Notice:
+                </strong>
+                <p style="margin: 0; font-size: 12px; color: #7c2d12; line-height: 1.5;">
+                  Your prescribed regimen has a defined duration of <strong>{{ regimen_duration }}</strong> (scheduled completion: <strong>{{ course_end_date }}</strong>). Once this course is completed, <strong>stop taking the medications</strong> unless explicitly re-evaluated and extended by your clinician.
+                </p>
+              </div>
+
+              <!-- Safety Interaction Flags (If Any) -->
+              {% if safety_alerts_count > 0 %}
+              <div style="background-color: #fef2f2; border: 1px solid #fee2e2; border-radius: 10px; padding: 14px 18px; margin-bottom: 22px;">
+                <strong style="color: #991b1b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">
+                  🚨 Clinical Safety Alerts & Cautions:
+                </strong>
+                <p style="margin: 0; font-size: 12px; color: #b91c1c; line-height: 1.5;">
+                  {{ safety_alerts_summary }}
+                </p>
+              </div>
+              {% endif %}
+
+              <!-- Action Link -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 22px;">
+                <tr>
+                  <td align="center">
+                    <a href="{{ portal_url }}" style="display: inline-block; background-color: #005c65; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 700; padding: 12px 28px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 92, 101, 0.2);">
+                      View Active Alerts & Regimen in Portal →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Clinician Note -->
+              <p style="margin: 0; font-size: 11px; color: #64748b; line-height: 1.5; text-align: center;">
+                Need help or experiencing unexpected side effects? Call our clinic desk immediately or email <a href="mailto:support.smileclinic@gmail.com" style="color: #005c65; font-weight: 600;">support.smileclinic@gmail.com</a>.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 32px; text-align: center;">
+              <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #475569;">
+                Smile Clinic Clinical Decision Support System & Pharmacopeia Service
+              </p>
+              <p style="margin: 0; font-size: 10px; color: #94a3b8; line-height: 1.4;">
+                Cryptographically hashed audit stamp: <span style="font-family: monospace;">{{ notary_hash }}</span><br>
+                This electronic reminder is confidential and protected by applicable health data privacy standards.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

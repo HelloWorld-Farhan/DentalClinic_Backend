@@ -236,3 +236,26 @@ class AuditEmailRequest(BaseModel):
         if not EMAIL_REGEX.match(clean):
             raise ValueError('Invalid email address format.')
         return clean
+
+
+class ScheduleAlertEmailRequest(BaseModel):
+    to_email: str
+    patient_name: str
+    patient_mrn: Optional[str] = 'PT-NEW-001'
+    clinician_name: Optional[str] = 'Authorized Clinician'
+    check_number: Optional[str] = 'CHK-2026-CURRENT'
+    schedule_date: Optional[str] = None
+    course_end_date: Optional[str] = None
+    regimen_duration: Optional[str] = '1 Month (30 Days)'
+    medications: List[Dict[str, Any]] = []
+    safety_alerts: List[Dict[str, Any]] = []
+    notary_hash: Optional[str] = None
+    portal_url: Optional[str] = 'https://prescription-dentalclinic.pages.dev/alerts'
+
+    @field_validator('to_email')
+    @classmethod
+    def validate_to_email(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not EMAIL_REGEX.match(clean):
+            raise ValueError('Invalid email address format.')
+        return clean

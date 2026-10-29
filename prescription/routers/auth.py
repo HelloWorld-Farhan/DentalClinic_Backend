@@ -65,7 +65,9 @@ from ..schemas import (
 
     ReportEmailRequest,
 
-    AuditEmailRequest
+    AuditEmailRequest,
+
+    ScheduleAlertEmailRequest
 
 )
 
@@ -2729,3 +2731,106 @@ def send_audit_email(req: AuditEmailRequest):
 
     }
 
+
+
+@router.post("/send-schedule-alert-email")
+def send_schedule_alert_email(req: ScheduleAlertEmailRequest, db: Session = Depends(get_db)):
+    """
+    Sends verified daily medication timetable and safety alert schedule to patient/clinician email.
+    """
+    import hashlib
+    from datetime import datetime, timezone
+    utc_now = datetime.now(timezone.utc).strftime("%d %b %Y, %I:%M %p UTC")
+    
+    # Build HTML rows for each medication
+    rows_html = []
+    for med in req.medications:
+        name = med.get("name") or med.get("drugName") or "Medication"
+        strength = med.get("dosage") or med.get("strength") or ""
+        freq = med.get("frequency") or "Once daily"
+        timing = med.get("scheduledTime") or med.get("timing") or "08:00 AM"
+        food = med.get("foodInstruction") or med.get("food") or "With or after food"
+        duration = med.get("duration") or req.regimen_duration or "30 Days"
+        
+        row = f"""
+        <tr style="border-bottom: 1px solid #f1f5f9;">
+          <td style="padding: 12px 14px; font-weight: 700; color: #005c65; white-space: nowrap;">
+            <span style="background: #e6f6f8; color: #005c65; padding: 3px 8px; border-radius: 6px; font-size: 11px;">{timing}</span>
+          </td>
+          <td style="padding: 12px 14px;">
+            <strong style="font-size: 13px; color: #0f172a;">{name}</strong> {strength}<br>
+            <span style="color: #64748b; font-size: 11px;">Frequency: {freq}</span>
+          </td>
+          <td style="padding: 12px 14px; color: #334155;">
+            {food}
+          </td>
+          <td style="padding: 12px 14px; text-align: right; color: #64748b; white-space: nowrap;">
+            {duration}
+          </td>
+        </tr>
+        """
+        rows_html.append(row)
+        
+    table_rows_str = "".join(rows_html) if rows_html else """
+    <tr>
+      <td colspan="4" style="padding: 16px; text-align: center; color: #64748b;">
+        No active scheduled medications listed.
+      </td>
+    </tr>
+    """
+    
+    # Format safety alerts summary
+    alerts_summary_parts = []
+    for al in req.safety_alerts:
+        title = al.get("title") or "Clinical Interaction"
+        rec = al.get("recommendation") or al.get("mechanism") or "Review with prescriber."
+        alerts_summary_parts.append(f"• <strong>{title}:</strong> {rec}")
+    safety_summary_str = "<br>".join(alerts_summary_parts) if alerts_summary_parts else "All interactions cleared."
+    
+    notary = req.notary_hash or f"SHA256:{hashlib.sha256(f'{req.check_number}:{req.patient_name}:{utc_now}'.encode('utf-8')).hexdigest()[:24].upper()}"
+    
+    context = {
+        "patient_name": req.patient_name,
+        "patient_mrn": req.patient_mrn or "PT-NEW-001",
+        "clinician_name": req.clinician_name or "Authorized Prescriber",
+        "check_number": req.check_number or "CHK-CURRENT",
+        "schedule_date": req.schedule_date or utc_now,
+        "course_end_date": req.course_end_date or "In 30 Days (Course Completed)",
+        "regimen_duration": req.regimen_duration or "1 Month",
+        "medication_table_rows": table_rows_str,
+        "safety_alerts_count": len(req.safety_alerts),
+        "safety_alerts_summary": safety_summary_str,
+        "portal_url": req.portal_url or "https://prescription-dentalclinic.pages.dev/alerts",
+        "notary_hash": notary
+    }
+    
+    subject = f"Smile Clinic — Medication Schedule & Safety Alert for {req.patient_name} [{req.check_number}]"
+    delivered = send_transactional_email(req.to_email, subject, "medication_schedule_alert_email.html", context)
+    
+    # Log audit event
+    try:
+        from ..models import AuditLog
+        audit_entry = AuditLog(
+            id=f"aud-sched-{int(datetime.now().timestamp())}",
+            user_email=req.to_email,
+            clinician_name=req.clinician_name or "Authorized Prescriber",
+            action="Medication Schedule & Safety Alert Dispatched",
+            patient_mrn=req.patient_mrn or "PT-GENERAL",
+            event_details=f"Dispatched intake timetable & safety warnings for {len(req.medications)} drugs to {req.to_email}",
+            severity="info",
+            inner_data={"patientName": req.patient_name, "checkNumber": req.check_number, "medicationsCount": len(req.medications)},
+            hash=notary,
+            created_at=datetime.now(timezone.utc)
+        )
+        db.add(audit_entry)
+        db.commit()
+    except Exception as e:
+        print(f"[Audit Log Warning] {e}")
+        
+    return {
+        "status": "success" if delivered else "sent_local",
+        "message": f"Medication schedule & safety alert dispatched to {req.to_email}",
+        "delivered": delivered,
+        "recipient": req.to_email,
+        "check_number": req.check_number
+    }
