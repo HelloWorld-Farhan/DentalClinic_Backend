@@ -11,31 +11,57 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 
 router = APIRouter(prefix="/api/prescriptions", tags=["Prescription AI Extraction"])
 
-# Model configuration - Prioritize ultra-fast Gemini 3.5 Flash Lite with 2.5 Flash fallback
-DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
-FALLBACK_MODELS = [DEFAULT_MODEL, "gemini-2.5-flash"]
+import re
+
+def sanitize_model_name(name: str) -> str:
+    cleaned = name.strip().replace(" ", "-").lower()
+    if cleaned.startswith("models/"):
+        cleaned = cleaned[7:]
+    return cleaned
+
+# Resilient model failover hierarchy
+RAW_DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+DEFAULT_MODEL = sanitize_model_name(RAW_DEFAULT_MODEL)
+_CANDIDATE_MODELS = [
+    DEFAULT_MODEL,
+    "gemini-2.5-flash",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+    "gemini-pro-latest",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash",
+    "gemini-3.8-flash"
+]
+FALLBACK_MODELS = []
+for m in _CANDIDATE_MODELS:
+    if m and m not in FALLBACK_MODELS:
+        FALLBACK_MODELS.append(m)
+
+def clean_key_string(k: str) -> str:
+    return re.sub(r'^[0-9]+[\s\-.:]+', '', k.strip()).strip().strip('"\'')
 
 def get_active_keys() -> List[str]:
-    """Collects all active Gemini keys from environment variables."""
+    """Collects all active Gemini keys from environment variables with sanitization."""
     keys = []
     comma_keys = os.getenv("GEMINI_API_KEYS", "")
     if comma_keys:
         for k in comma_keys.split(","):
-            cleaned = k.strip()
+            cleaned = clean_key_string(k)
             if cleaned and cleaned not in keys:
                 keys.append(cleaned)
 
     for i in range(1, 16):
-        k = os.getenv(f"GEMINI_KEY_{i}", "").strip()
-        if k and k not in keys:
-            keys.append(k)
+        k = os.getenv(f"GEMINI_KEY_{i}", "")
+        cleaned = clean_key_string(k)
+        if cleaned and cleaned not in keys:
+            keys.append(cleaned)
 
     return keys
 
 _current_key_index = 0
 
 def call_gemini_with_failover(prompt: str, inline_data: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
-    """Executes a Gemini generateContent call with automatic 14-key failover rotation."""
+    """Executes a Gemini generateContent call with automatic multi-key and multi-model failover."""
     global _current_key_index
     keys = get_active_keys()
     if not keys:
@@ -60,7 +86,7 @@ def call_gemini_with_failover(prompt: str, inline_data: Optional[Dict[str, str]]
     total_keys = len(keys)
     last_error = "Unknown error"
 
-    for attempt in range(min(3, total_keys)):
+    for attempt in range(total_keys):
         key_idx = (_current_key_index + attempt) % total_keys
         api_key = keys[key_idx]
 
@@ -72,7 +98,7 @@ def call_gemini_with_failover(prompt: str, inline_data: Optional[Dict[str, str]]
                 headers={"Content-Type": "application/json"}
             )
             try:
-                with urllib.request.urlopen(req, timeout=16) as res:
+                with urllib.request.urlopen(req, timeout=35) as res:
                     res_body = json.loads(res.read().decode("utf-8"))
                     cand_text = (
                         res_body.get("candidates", [{}])[0]
@@ -80,18 +106,31 @@ def call_gemini_with_failover(prompt: str, inline_data: Optional[Dict[str, str]]
                         .get("parts", [{}])[0]
                         .get("text", "")
                     )
+                    cleaned_text = cand_text.strip()
+                    if cleaned_text.startswith("```json"):
+                        cleaned_text = cleaned_text[7:]
+                    elif cleaned_text.startswith("```"):
+                        cleaned_text = cleaned_text[3:]
+                    if cleaned_text.endswith("```"):
+                        cleaned_text = cleaned_text[:-3]
+                    cleaned_text = cleaned_text.strip()
+
+                    parsed = json.loads(cleaned_text)
                     _current_key_index = (key_idx + 1) % total_keys
-                    return json.loads(cand_text)
+                    return parsed
             except urllib.error.HTTPError as e:
                 err_text = e.read().decode("utf-8", errors="ignore")
-                last_error = f"Key #{key_idx + 1} HTTP {e.code}: {err_text}"
-                print(f"[Gemini Warning] Key #{key_idx + 1} ({model_name}) error: {e.code}. Rotating...")
-                if e.code in (429, 403, 400):
+                last_error = f"Key #{key_idx + 1} ({model_name}) HTTP {e.code}: {err_text[:120]}"
+                print(f"[Gemini Warning] Key #{key_idx + 1} ({model_name}) error: {e.code}")
+                # Rotate key immediately on rate limit or auth rejection
+                if e.code in (429, 403):
                     break
+                # On 404 or 400 (unsupported model), try next model on the same key
+                continue
             except Exception as e:
-                last_error = f"Key #{key_idx + 1} Exception: {str(e)}"
-                print(f"[Gemini Warning] Key #{key_idx + 1} error: {e}. Rotating...")
-                break
+                last_error = f"Key #{key_idx + 1} ({model_name}) Exception: {str(e)}"
+                print(f"[Gemini Warning] Key #{key_idx + 1} ({model_name}) error: {e}")
+                continue
 
     raise HTTPException(
         status_code=502,
