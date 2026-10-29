@@ -141,3 +141,10 @@ class PatientRecord(Base):
     current_medications = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+class UserCustomQuestion(Base):
+    __tablename__ = "user_custom_questions"
+
+    id = Column(String(64), primary_key=True)
+    user_email = Column(String(255), index=True, nullable=False)
+    question_text = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

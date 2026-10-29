@@ -9,6 +9,7 @@ from ..models import (
     UploadedDocument,
     ClinicalRule,
     PatientRecord,
+    UserCustomQuestion,
 )
 
 router = APIRouter(prefix="/api/v1/sync", tags=["Cross-Device Sync"])
@@ -67,6 +68,14 @@ def get_all_user_data(
         db.query(PatientRecord)
         .filter(PatientRecord.user_email == norm_email)
         .order_by(PatientRecord.created_at.desc())
+        .all()
+    )
+
+    custom_questions = (
+        db.query(UserCustomQuestion)
+        .filter(UserCustomQuestion.user_email == norm_email)
+        .order_by(UserCustomQuestion.created_at.desc())
+        .limit(20)
         .all()
     )
 
@@ -158,6 +167,14 @@ def get_all_user_data(
                 "currentMedications": p.current_medications or [],
             }
             for p in patients
+        ],
+        "customQuestions": [
+            {
+                "id": q.id,
+                "text": q.question_text,
+                "createdAt": q.created_at.isoformat() if q.created_at else None,
+            }
+            for q in custom_questions
         ],
     }
 
@@ -526,6 +543,85 @@ def toggle_single_rule(
         db.commit()
         return {"status": "success", "id": rule_id, "active": rule.active}
     return {"status": "not_found", "id": rule_id}
+
+# ==========================================
+# CUSTOM QUESTIONS ENDPOINTS (CROSS-DEVICE SYNC)
+# ==========================================
+@router.get("/custom-questions")
+def get_user_custom_questions(
+    email: str = Query(..., description="Clinician email"),
+    db: Session = Depends(get_db)
+):
+    norm_email = clean_email(email)
+    qs = (
+        db.query(UserCustomQuestion)
+        .filter(UserCustomQuestion.user_email == norm_email)
+        .order_by(UserCustomQuestion.created_at.desc())
+        .limit(20)
+        .all()
+    )
+    return {
+        "status": "success",
+        "customQuestions": [
+            {
+                "id": q.id,
+                "text": q.question_text,
+                "createdAt": q.created_at.isoformat() if q.created_at else None,
+            }
+            for q in qs
+        ]
+    }
+
+@router.post("/custom-questions")
+def save_user_custom_question(
+    payload: Dict[str, Any] = Body(...),
+    db: Session = Depends(get_db)
+):
+    import uuid
+    norm_email = clean_email(payload.get("email"))
+    text = (payload.get("text") or payload.get("question") or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Question text is required")
+
+    # Prevent duplicate identical questions for same user
+    existing = (
+        db.query(UserCustomQuestion)
+        .filter(UserCustomQuestion.user_email == norm_email, UserCustomQuestion.question_text == text)
+        .first()
+    )
+    if existing:
+        return {"status": "success", "id": existing.id, "text": existing.question_text}
+
+    qid = payload.get("id") or f"cq-{int(datetime.now(timezone.utc).timestamp()*1000)}-{str(uuid.uuid4())[:6]}"
+    new_q = UserCustomQuestion(
+        id=qid,
+        user_email=norm_email,
+        question_text=text,
+        created_at=datetime.now(timezone.utc)
+    )
+    db.add(new_q)
+    db.commit()
+    return {"status": "success", "id": qid, "text": text}
+
+@router.delete("/custom-questions/{question_id}")
+def delete_user_custom_question(
+    question_id: str,
+    email: str = Query(..., description="Clinician email"),
+    db: Session = Depends(get_db)
+):
+    norm_email = clean_email(email)
+    q = (
+        db.query(UserCustomQuestion)
+        .filter(UserCustomQuestion.id == question_id, UserCustomQuestion.user_email == norm_email)
+        .first()
+    )
+    if not q:
+        q = db.query(UserCustomQuestion).filter(UserCustomQuestion.id == question_id).first()
+    if q:
+        db.delete(q)
+        db.commit()
+        return {"status": "success", "deletedId": question_id}
+    return {"status": "not_found", "message": "Question not found"}
 
 @router.delete("/rules-by-source")
 def delete_rules_by_source(

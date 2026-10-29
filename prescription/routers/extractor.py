@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/prescriptions", tags=["Prescription AI Extractio
 
 # Model configuration
 DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
-FALLBACK_MODELS = [DEFAULT_MODEL, "gemini-3.8-flash", "gemini-3.1-pro-preview"]
+FALLBACK_MODELS = [DEFAULT_MODEL, "gemini-2.5-flash"]
 
 def get_active_keys() -> List[str]:
     """Collects all active Gemini keys from environment variables."""
@@ -72,7 +72,7 @@ def call_gemini_with_failover(prompt: str, inline_data: Optional[Dict[str, str]]
                 headers={"Content-Type": "application/json"}
             )
             try:
-                with urllib.request.urlopen(req, timeout=30) as res:
+                with urllib.request.urlopen(req, timeout=8) as res:
                     res_body = json.loads(res.read().decode("utf-8"))
                     cand_text = (
                         res_body.get("candidates", [{}])[0]
