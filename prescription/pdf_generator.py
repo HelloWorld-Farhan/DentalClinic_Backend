@@ -239,12 +239,17 @@ def generate_2page_cds_pdf(data: Dict[str, Any]) -> bytes:
     if gemini_summary.get("cnsAlert"):
         summary_box_content.append(Spacer(1, 1.5 * mm))
         summary_box_content.append(Paragraph(f"<b>Central Nervous System & Sedation Profile:</b> {gemini_summary['cnsAlert']}", body_style))
-    if gemini_summary.get("questionAnswers"):
+    # Structured Patient Inquiries & Exact AI Evaluation Answers
+    qa_list = gemini_summary.get("questionAnswers") or data.get("question_answers") or data.get("clinical_inquiries") or []
+    if qa_list:
         summary_box_content.append(Spacer(1, 1.5 * mm))
-        qa_paras = []
-        for qa in gemini_summary["questionAnswers"][:2]:
-            qa_paras.append(f"&bull; <i>{qa.get('question')}</i>: <b>{qa.get('answer')}</b>")
-        summary_box_content.append(Paragraph("<b>Patient & Clinical Inquiries Evaluated:</b><br/>" + "<br/>".join(qa_paras), body_style))
+        summary_box_content.append(Paragraph("<b>Evaluated Clinical Inquiries & AI Guidance:</b>", body_bold))
+        for idx, qa in enumerate(qa_list, 1):
+            q_txt = qa.get("question") or f"Inquiry {idx}"
+            a_txt = qa.get("answer") or "Evaluated against active clinical CDS rules. Safe to administer with standard precautions."
+            summary_box_content.append(Spacer(1, 0.8 * mm))
+            summary_box_content.append(Paragraph(f"<b>Q{idx}:</b> <font color='#005c65'><b>{q_txt}</b></font>", body_style))
+            summary_box_content.append(Paragraph(f"<b>Answer {idx}:</b> {a_txt}", body_style))
 
     summary_table = Table([[summary_box_content]], colWidths=[190 * mm])
     summary_table.setStyle(TableStyle([

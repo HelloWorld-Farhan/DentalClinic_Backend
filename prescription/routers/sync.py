@@ -196,7 +196,8 @@ def get_all_user_data(
             for q in custom_questions
         ],
         "notificationsReadAt": notif_state.notifications_read_at if notif_state and notif_state.notifications_read_at else 0,
-        "readNotificationIds": notif_state.read_notification_ids if notif_state and notif_state.read_notification_ids else [],
+        "readNotificationIds": notif_state.read_notification_ids if notif_state and notif_state.read_notification_ids else [],
+
         "syncedKnowledge": notif_state.synced_knowledge if notif_state and notif_state.synced_knowledge else None,
     }
 
@@ -818,6 +819,8 @@ def get_or_generate_report_pdf(
         except Exception:
             gemini_summary = {"clinicalSummary": chk.notes}
 
+    inquiries_list = gemini_summary.get("questionAnswers") or (chk.clinical_inquiries if chk and chk.clinical_inquiries else [])
+
     pdf_bytes = generate_2page_cds_pdf({
         "report_id": report_id,
         "patient_name": patient_name,
@@ -828,7 +831,9 @@ def get_or_generate_report_pdf(
         "digital_seal": digital_seal,
         "prescriptions": prescriptions,
         "alerts": alerts,
-        "gemini_summary": gemini_summary
+        "gemini_summary": gemini_summary,
+        "clinical_inquiries": inquiries_list,
+        "question_answers": inquiries_list
     })
 
     # Save to Cloudflare R2 and update Supabase

@@ -92,6 +92,25 @@
                 </tr>
               </table>
 
+              <!-- Evaluated Clinical Inquiries & Exact AI Answers -->
+              {% if question_answers and question_answers|length > 0 %}
+              <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+                <div style="font-size: 11px; font-weight: 800; color: #005c65; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center;">
+                  &#128172;&nbsp; Evaluated Clinical Inquiries &amp; Exact AI Answers
+                </div>
+                {% for qa in question_answers %}
+                <div style="background-color: #ffffff; border-left: 3px solid #005c65; border-radius: 6px; padding: 10px 14px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                  <div style="font-size: 12px; font-weight: 700; color: #0f172a; margin-bottom: 4px;">
+                    Q{{ loop.index }}: {{ qa.question }}
+                  </div>
+                  <div style="font-size: 12px; color: #334155; line-height: 1.45;">
+                    <strong style="color: #005c65;">Answer {{ loop.index }}:</strong> {{ qa.answer }}
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+              {% endif %}
+
               <!-- Prominent Download Button & PDF Filename Details -->
               <div style="background-color: #f0fdfa; border: 1px solid #99f6e4; border-radius: 14px; padding: 22px 20px; text-align: center; margin-bottom: 18px;">
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 auto 12px auto;">

@@ -2591,6 +2591,9 @@ def send_report_email(req: ReportEmailRequest, db: Session = Depends(get_db)):
     download_url = req.download_url or f"{backend_base}/api/v1/sync/report-pdf?id={req.report_id}&email={target_email}"
     pdf_filename = req.pdf_filename or f"SmileClinic_CDS_Report_{req.report_id}.pdf"
 
+    # Structured inquiries from request or database
+    inquiries_list = req.question_answers or (chk.clinical_inquiries if chk and chk.clinical_inquiries else [])
+
     # Generate 2-Page CDS ReportLab PDF Attachment
     pdf_b64 = req.pdf_base64
     if not pdf_b64:
@@ -2606,7 +2609,12 @@ def send_report_email(req: ReportEmailRequest, db: Session = Depends(get_db)):
                 'digital_seal': digital_seal,
                 'prescriptions': prescriptions,
                 'alerts': alerts,
-                'gemini_summary': {'clinicalSummary': req.alerts_summary or 'Prescription screened and verified clean.'}
+                'clinical_inquiries': inquiries_list,
+                'question_answers': inquiries_list,
+                'gemini_summary': {
+                    'clinicalSummary': req.alerts_summary or 'Prescription screened and verified clean.',
+                    'questionAnswers': inquiries_list
+                }
             })
             pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
         except Exception as e:
@@ -2624,6 +2632,7 @@ def send_report_email(req: ReportEmailRequest, db: Session = Depends(get_db)):
         "rx_count": len(prescriptions) if prescriptions else req.rx_count,
         "alerts_summary": req.alerts_summary or "Screening verification finalized.",
         "alerts_count": len(alerts) if alerts else req.alerts_count,
+        "question_answers": inquiries_list,
         "portal_url": req.portal_url or "https://prescription-dentalclinic.pages.dev/report",
         "download_url": download_url,
         "pdf_filename": pdf_filename,

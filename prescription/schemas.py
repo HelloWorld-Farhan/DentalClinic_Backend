@@ -403,6 +403,7 @@ class ReportEmailRequest(BaseModel):
     pdf_filename: Optional[str] = None
     pdf_base64: Optional[str] = None
     notary_hash: Optional[str] = 'SHA256-4f8b9e892c21ad8310c8ff0e34a7812bc88'
+    question_answers: Optional[List[Dict[str, Any]]] = None
 
     @field_validator('to_email', 'recipient_email', mode='before')
     @classmethod
