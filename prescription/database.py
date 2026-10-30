@@ -28,7 +28,13 @@ def ensure_schema_compatibility(target_engine):
     try:
         from sqlalchemy import text, inspect
         # Ensure all models are registered and tables exist
-        import prescription.models  # noqa: F401
+        try:
+            import prescription.models  # noqa: F401
+        except ImportError:
+            try:
+                from . import models  # noqa: F401
+            except ImportError:
+                import Dental_Backend.prescription.models  # noqa: F401
         Base.metadata.create_all(bind=target_engine)
 
         inspector = inspect(target_engine)
@@ -83,6 +89,13 @@ def ensure_schema_compatibility(target_engine):
                     conn.execute(text("ALTER TABLE prescription_checks ADD COLUMN source_document_name VARCHAR(255)"))
                 if "source_type" not in chk_cols:
                     conn.execute(text("ALTER TABLE prescription_checks ADD COLUMN source_type VARCHAR(50)"))
+                conn.commit()
+
+        if "user_notification_states" in inspector.get_table_names():
+            uns_cols = [c["name"] for c in inspector.get_columns("user_notification_states")]
+            with target_engine.connect() as conn:
+                if "synced_knowledge" not in uns_cols:
+                    conn.execute(text("ALTER TABLE user_notification_states ADD COLUMN synced_knowledge JSON"))
                 conn.commit()
     except Exception as e:
         print(f"[DB Schema Notice] Schema check: {e}")

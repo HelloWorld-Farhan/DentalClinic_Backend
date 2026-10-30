@@ -259,7 +259,21 @@ async def execute_prescription_safety_check(
             "rxnorm_status": norm.get("status", "unmatched")
         })
 
-    # 2. Build AI Dossier Prompt
+    # 2. Extract Active Synchronized Knowledge Sources
+    knowledge_sources = payload.get("knowledge_sources") or {}
+    synced_docs = knowledge_sources.get("synced_documents") or []
+    synced_checks = knowledge_sources.get("synced_checks") or []
+    knowledge_context = ""
+    if synced_docs or synced_checks:
+        knowledge_context = (
+            f"[Active Synchronized Clinical Knowledge Sources]:\n"
+            f"- Synchronized Patient History Documents: {', '.join(synced_docs) if synced_docs else 'None'}\n"
+            f"- Synchronized Prior Regimens: {', '.join(synced_checks) if synced_checks else 'None'}\n"
+            f"NOTE: The clinician specifically selected these active medical history sources (and excluded any unselected history). "
+            f"Evaluate the newly prescribed medications strictly and specifically against the patient's synchronized active clinical history.\n\n"
+        )
+
+    # 3. Build AI Dossier Prompt
     prompt = (
         "You are an expert clinical pharmacologist and dental operatory safety director. "
         "Analyze the following patient safety dossier, prescribed medications, clinical rules, and inquiries.\n\n"
@@ -271,6 +285,7 @@ async def execute_prescription_safety_check(
         f"- Allergies: {', '.join(patient.get('allergies', [])) or 'None documented'}\n"
         f"- Conditions / Medical History: {', '.join(patient.get('conditions', [])) or 'None documented'}\n"
         f"- Current Active Medications: {', '.join(patient.get('current_medications', [])) or 'None'}\n\n"
+        f"{knowledge_context}"
         f"[Newly Prescribed Medication Regimen]:\n"
         f"{json.dumps(normalized_meds, indent=2)}\n\n"
         f"[Clinic Interaction Rules]:\n"
