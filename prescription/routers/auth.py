@@ -2854,7 +2854,7 @@ def send_doctor_consult_email(req: DoctorConsultEmailRequest, db: Session = Depe
     }
     
     subject = f"Smile Clinic CDS Alert: Prescription Interaction Consultation for {req.patient_name} [{req.severity.upper()}]"
-    delivered = send_transactional_email(req.to_doctor_email, subject, 'prescription_safety_alert.html', context)
+    delivered = send_transactional_email(req.to_doctor_email, subject, 'doctor_medication_change_alert.html', context)
     
     # Immutable audit logging into PostgreSQL database
     try:
