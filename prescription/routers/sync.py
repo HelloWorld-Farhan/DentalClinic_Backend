@@ -196,7 +196,8 @@ def get_all_user_data(
             for q in custom_questions
         ],
         "notificationsReadAt": notif_state.notifications_read_at if notif_state and notif_state.notifications_read_at else 0,
-        "readNotificationIds": notif_state.read_notification_ids if notif_state and notif_state.read_notification_ids else [],
+        "readNotificationIds": notif_state.read_notification_ids if notif_state and notif_state.read_notification_ids else [],
+        "syncedKnowledge": notif_state.synced_knowledge if notif_state and notif_state.synced_knowledge else None,
     }
 
 # ==========================================
@@ -893,4 +894,33 @@ def update_notifications_read(
         "status": "success",
         "notificationsReadAt": state.notifications_read_at,
         "readNotificationIds": state.read_notification_ids
+    }
+
+
+@router.post("/knowledge-state")
+def update_synced_knowledge_state(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db)
+):
+    email = (payload.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+    synced_knowledge = payload.get("syncedKnowledge")
+
+    state = db.query(UserNotificationState).filter(UserNotificationState.user_email == email).first()
+    if not state:
+        state = UserNotificationState(
+            id=email,
+            user_email=email,
+            synced_knowledge=synced_knowledge,
+        )
+        db.add(state)
+    else:
+        state.synced_knowledge = synced_knowledge
+        state.updated_at = datetime.now(timezone.utc)
+
+    db.commit()
+    return {
+        "status": "success",
+        "syncedKnowledge": state.synced_knowledge
     }
