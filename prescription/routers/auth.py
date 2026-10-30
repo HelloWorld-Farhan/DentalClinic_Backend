@@ -262,88 +262,56 @@ def remove_user_remembered_device(user: User, device_id: Optional[str]) -> None:
 
 
 
-def send_template_email(to_email: str, subject: str, template_name: str, context: dict, attachment_base64: Optional[str] = None, attachment_name: Optional[str] = None) -> bool:
-
-    """Renders HTML template from templates/ and sends via Google Apps Script Mail Gateway."""
-
+def send_template_email(to_email: str, subject: str, template_name: str, context: dict, attachment_base64: Optional[str] = None, attachment_name: Optional[str] = None, cc: Optional[str] = None) -> bool:
+    """Renders HTML template from templates/ via Jinja2 and sends via Google Apps Script Mail Gateway."""
     template_file = get_template_path(template_name)
-
+    html_content = ""
     if template_file and template_file.exists():
-
         with open(template_file, "r", encoding="utf-8") as f:
-
-            html_content = f.read()
-
-        for k, v in context.items():
-
-            html_content = html_content.replace(f"{{{{ {k} }}}}", str(v))
-
-            html_content = html_content.replace(f"{{{{{k}}}}}", str(v))
-
+            raw_tpl = f.read()
+        try:
+            from jinja2 import Template
+            html_content = Template(raw_tpl).render(**context)
+        except Exception as je:
+            html_content = raw_tpl
+            for k, v in context.items():
+                html_content = html_content.replace(f"{{{{ {k} }}}}", str(v))
+                html_content = html_content.replace(f"{{{{{k}}}}}", str(v))
     else:
-
         html_content = f"<h2>Smile Clinic</h2><p>{subject}</p>"
 
-
-
     if not GOOGLE_APPS_SCRIPT_URL:
-
         print(f"[AUTH_EMAIL_DEV] GOOGLE_APPS_SCRIPT_URL unset; email to {to_email} captured in local dev mode.")
-
         return False
-
-
 
     try:
-
         post_data = {
-
             "to": to_email,
-
             "subject": subject,
-
             "html": html_content
-
         }
+        if cc and cc != to_email and "@" in cc:
+            post_data["cc"] = cc
 
         if attachment_base64 and attachment_name:
-
             post_data["attachment_base64"] = attachment_base64
-
             post_data["attachment_name"] = attachment_name
-
             post_data["attachment_type"] = "application/pdf"
 
-
-
         res = requests.post(
-
             GOOGLE_APPS_SCRIPT_URL,
-
             json=post_data,
-
-            timeout=10
-
+            timeout=15
         )
-
         if res.status_code == 200:
-
-            print(f"[AUTH_EMAIL_SUCCESS] Dispatched '{template_name}' to {to_email} via Google Apps Script.")
-
+            print(f"[AUTH_EMAIL_SUCCESS] Dispatched '{template_name}' to {to_email} (CC: {cc}) via Google Apps Script.")
             return True
-
         else:
-
             print(f"[AUTH_EMAIL_ERROR] Apps Script returned status {res.status_code}: {res.text}")
-
             return False
-
     except Exception as e:
-
         print(f"[AUTH_EMAIL_EXCEPTION] Email delivery skipped: {e}")
-
         return False
-
 
 
 # Backward-compatibility alias
@@ -2854,7 +2822,8 @@ def send_doctor_consult_email(req: DoctorConsultEmailRequest, db: Session = Depe
     }
     
     subject = f"Smile Clinic CDS Alert: Prescription Interaction Consultation for {req.patient_name} [{req.severity.upper()}]"
-    delivered = send_transactional_email(req.to_doctor_email, subject, 'doctor_medication_change_alert.html', context)
+    cc_user = req.clinician_email if (req.clinician_email and req.clinician_email.strip().lower() != req.to_doctor_email.strip().lower() and '@' in req.clinician_email) else None
+    delivered = send_transactional_email(req.to_doctor_email, subject, 'doctor_medication_change_alert.html', context, cc=cc_user)
     
     # Immutable audit logging into PostgreSQL database
     try:
