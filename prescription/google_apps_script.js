@@ -27,7 +27,7 @@ function doPost(e) {
     var recipient = data.to || data.to_email || data.recipient || data.email;
     var cc = data.cc || data.cc_email || data.clinician_email;
     var subject = data.subject || "Smile Clinic Notification";
-    var htmlBody = data.html || "<p>Smile Clinic Clinical Notification</p>";
+    var htmlBody = data.html || data.htmlBody || data.body || "<p>Smile Clinic Clinical Notification</p>";
     var plainText = data.text || "Please view this clinical message in an HTML-enabled email client.";
 
     if (!recipient) {
