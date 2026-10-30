@@ -435,6 +435,8 @@ class AuditEmailRequest(BaseModel):
 
     filename: Optional[str] = None
 
+    records: Optional[List[Dict[str, Any]]] = None
+
 
 
     @field_validator('to_email')

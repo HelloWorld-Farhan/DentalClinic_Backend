@@ -2665,6 +2665,8 @@ def send_audit_email(req: AuditEmailRequest):
 
         "filename": filename,
 
+        "records": req.records or [],
+
     }
 
     subject = f"Smile Clinic — HIPAA Audit Trail Export [{req.export_format.upper()}]"
@@ -2678,6 +2680,8 @@ def send_audit_email(req: AuditEmailRequest):
         "message": f"HIPAA audit trail export dispatched to {req.to_email}",
 
         "filename": filename,
+
+        "records": req.records or [],
 
         "delivered": delivered
 
