@@ -15,3 +15,4 @@ def test_extract_empty_file_400():
     )
     assert response.status_code == 400
     assert "empty" in response.json().get("detail", "").lower()
+

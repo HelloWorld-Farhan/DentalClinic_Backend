@@ -11,6 +11,7 @@ from ..models import (
     ClinicalRule,
     PatientRecord,
     UserCustomQuestion,
+    UserNotificationState,
 )
 
 router = APIRouter(prefix="/api/v1/sync", tags=["Cross-Device Sync"])
@@ -87,6 +88,12 @@ def get_all_user_data(
         .order_by(UserCustomQuestion.created_at.desc())
         .limit(20)
         .all()
+    )
+
+    notif_state = (
+        db.query(UserNotificationState)
+        .filter(UserNotificationState.user_email == norm_email)
+        .first()
     )
 
     return {
@@ -188,6 +195,8 @@ def get_all_user_data(
             }
             for q in custom_questions
         ],
+        "notificationsReadAt": notif_state.notifications_read_at if notif_state and notif_state.notifications_read_at else 0,
+        "readNotificationIds": notif_state.read_notification_ids if notif_state and notif_state.read_notification_ids else [],
     }
 
 # ==========================================
@@ -849,3 +858,39 @@ def get_or_generate_report_pdf(
             "Cache-Control": "no-cache"
         }
     )
+
+
+@router.post("/notifications/read")
+def update_notifications_read(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db)
+):
+    email = (payload.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+    read_at = payload.get("readAt") or 0
+    notif_ids = payload.get("notifIds") or []
+
+    state = db.query(UserNotificationState).filter(UserNotificationState.user_email == email).first()
+    if not state:
+        state = UserNotificationState(
+            id=email,
+            user_email=email,
+            read_notification_ids=notif_ids,
+            notifications_read_at=read_at
+        )
+        db.add(state)
+    else:
+        if read_at:
+            state.notifications_read_at = max(state.notifications_read_at or 0, read_at)
+        existing = set(state.read_notification_ids or [])
+        existing.update(notif_ids)
+        state.read_notification_ids = list(existing)
+        state.updated_at = datetime.now(timezone.utc)
+
+    db.commit()
+    return {
+        "status": "success",
+        "notificationsReadAt": state.notifications_read_at,
+        "readNotificationIds": state.read_notification_ids
+    }
