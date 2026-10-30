@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 from typing import List, Optional, Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
@@ -13,6 +14,15 @@ from ..models import (
 )
 
 router = APIRouter(prefix="/api/v1/sync", tags=["Cross-Device Sync"])
+
+def safe_extract_check_id(pdf_name: Optional[str]) -> Optional[str]:
+    if not pdf_name:
+        return None
+    try:
+        m = re.search(r'(CHK-\d{4}-\d+|chk-\d+)', pdf_name, re.IGNORECASE)
+        return m.group(1) if m else None
+    except Exception:
+        return None
 
 def clean_email(email: Optional[str]) -> str:
     if not email:
@@ -109,9 +119,7 @@ def get_all_user_data(
         "auditLogs": [
             {
                 "id": a.id,
-                "checkId": (a.inner_data or {}).get("checkId") if isinstance(a.inner_data, dict) and (a.inner_data or {}).get("checkId") else (
-                    re.search(r'(CHK-\d{4}-\d+|chk-\d+)', a.pdf_filename or '').group(1) if a.pdf_filename and re.search(r'(CHK-\d{4}-\d+|chk-\d+)', a.pdf_filename) else None
-                ),
+                "checkId": (a.inner_data or {}).get("checkId") if isinstance(a.inner_data, dict) and (a.inner_data or {}).get("checkId") else safe_extract_check_id(a.pdf_filename),
                 "action": a.action,
                 "clinicianName": a.clinician_name,
                 "patientMrn": a.patient_mrn,
