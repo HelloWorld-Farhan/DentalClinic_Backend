@@ -829,6 +829,7 @@ def get_or_generate_report_pdf(
         "clinician_name": clinician_name,
         "overall_status": overall_status,
         "digital_seal": digital_seal,
+        "source_document_url": getattr(chk, 'source_document_url', '') or getattr(chk, 'image_url', '') if chk else '',
         "prescriptions": prescriptions,
         "alerts": alerts,
         "gemini_summary": gemini_summary,

@@ -143,6 +143,9 @@ def generate_2page_cds_pdf(data: Dict[str, Any]) -> bytes:
     story.append(Spacer(1, 2.5 * mm))
 
     # 2. Metadata Grid
+    source_doc_url = data.get("source_document_url") or data.get("sourceDocumentUrl") or ""
+    rx_source_text = f"<b>PRESCRIPTION SCAN:</b><br/><a href='{source_doc_url}'><font color='#005c65'><u>View Original Document</u></font></a>" if source_doc_url else "<b>PRESCRIPTION SCAN:</b><br/>EHR Electronic Entry"
+
     meta_data = [
         [
             Paragraph(f"<b>REPORT ID:</b><br/>{report_id}", body_style),
@@ -152,7 +155,7 @@ def generate_2page_cds_pdf(data: Dict[str, Any]) -> bytes:
         [
             Paragraph(f"<b>PATIENT:</b><br/>{patient_name} ({patient_mrn})", body_style),
             Paragraph(f"<b>DEMOGRAPHICS:</b><br/>{patient_age_gender}", body_style),
-            Paragraph("<b>PROTOCOL:</b><br/>CDS §10.4 / HIPAA Safe Harbor", body_style),
+            Paragraph(rx_source_text, body_style),
         ]
     ]
     meta_table = Table(meta_data, colWidths=[65 * mm, 65 * mm, 60 * mm])
