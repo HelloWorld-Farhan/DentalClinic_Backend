@@ -67,7 +67,8 @@ from ..schemas import (
 
     AuditEmailRequest,
 
-    ScheduleAlertEmailRequest
+    ScheduleAlertEmailRequest,
+    DoctorConsultEmailRequest
 
 )
 
@@ -2717,7 +2718,8 @@ def send_audit_email(req: AuditEmailRequest):
 
 
 @router.post("/send-schedule-alert-email")
-def send_schedule_alert_email(req: ScheduleAlertEmailRequest, db: Session = Depends(get_db)):
+def send_schedule_alert_email(req: ScheduleAlertEmailRequest,
+    DoctorConsultEmailRequest, db: Session = Depends(get_db)):
     """
     Sends verified daily medication timetable and safety alert schedule to patient/clinician email.
     """
@@ -2817,3 +2819,82 @@ def send_schedule_alert_email(req: ScheduleAlertEmailRequest, db: Session = Depe
         "recipient": req.to_email,
         "check_number": req.check_number
     }
+
+@router.post('/send-doctor-consult-email')
+def send_doctor_consult_email(req: DoctorConsultEmailRequest, db: Session = Depends(get_db)):
+    """
+    Sends an urgent clinical interaction alert, doctor consultation notice, and proposed regimen change to the prescribing doctor.
+    """
+    import hashlib
+    from datetime import datetime, timezone
+    utc_now = datetime.now(timezone.utc).strftime('%d %b %Y, %I:%M %p UTC')
+    
+    drug_a = req.interacting_drugs[0] if len(req.interacting_drugs) > 0 else 'Prescribed Medication'
+    drug_b = req.interacting_drugs[1] if len(req.interacting_drugs) > 1 else 'Interacting Agent'
+    
+    notary = req.notary_hash or f"SHA256:{hashlib.sha256(f'{req.check_number}:{req.patient_name}:{req.doctor_name}:{utc_now}'.encode('utf-8')).hexdigest()[:24].upper()}"
+    
+    context = {
+        'prescriber_name': req.doctor_name,
+        'doctor_name': req.doctor_name,
+        'patient_name': req.patient_name,
+        'patient_mrn': req.patient_mrn or 'PT-NEW-001',
+        'severity_level': req.severity.upper(),
+        'alert_title': req.alert_title,
+        'proposed_drug': drug_a,
+        'conflict_agent': drug_b,
+        'interaction_mechanism': req.clinical_mechanism,
+        'substituted_medication': req.substituted_medication,
+        'clinical_notes': req.rationale,
+        'clinician_name': req.clinician_name or 'Authorized Clinician',
+        'clinician_email': req.clinician_email or '',
+        'check_number': req.check_number or 'CHK-CURRENT',
+        'review_url': req.portal_url or 'https://prescription-dentalclinic.pages.dev/alerts',
+        'notary_hash': notary
+    }
+    
+    subject = f"Smile Clinic CDS Alert: Prescription Interaction Consultation for {req.patient_name} [{req.severity.upper()}]"
+    delivered = send_transactional_email(req.to_doctor_email, subject, 'prescription_safety_alert.html', context)
+    
+    # Immutable audit logging into PostgreSQL database
+    try:
+        from ..models import AuditLog
+        audit_entry = AuditLog(
+            id=f"aud-doc-{int(datetime.now().timestamp())}",
+            user_email=req.clinician_email or req.to_doctor_email,
+            clinician_name=req.clinician_name or 'Authorized Prescriber',
+            action='Doctor Consulted & Regimen Modified',
+            patient_mrn=req.patient_mrn or 'PT-GENERAL',
+            event_details=f"Clinical alert for {drug_a} <-> {drug_b} dispatched to {req.doctor_name} ({req.to_doctor_email}). Substituted drug: {req.substituted_medication or 'None'}",
+            severity=req.severity.lower(),
+            inner_data={
+                'doctorName': req.doctor_name,
+                'doctorEmail': req.to_doctor_email,
+                'patientName': req.patient_name,
+                'patientMrn': req.patient_mrn,
+                'checkNumber': req.check_number,
+                'alertTitle': req.alert_title,
+                'interactingDrugs': req.interacting_drugs,
+                'substitutedMedication': req.substituted_medication,
+                'rationale': req.rationale,
+                'notaryHash': notary
+            },
+            hash=notary,
+            created_at=datetime.now(timezone.utc)
+        )
+        db.add(audit_entry)
+        db.commit()
+    except Exception as e:
+        print(f"[Doctor Consult Audit Warning] {e}")
+        
+    return {
+        'status': 'success' if delivered else 'sent_local',
+        'message': f"Clinical consultation notice successfully dispatched to Dr. {req.doctor_name} ({req.to_doctor_email})",
+        'delivered': delivered,
+        'doctor_name': req.doctor_name,
+        'doctor_email': req.to_doctor_email,
+        'substituted_medication': req.substituted_medication,
+        'check_number': req.check_number,
+        'notary_hash': notary
+    }
+

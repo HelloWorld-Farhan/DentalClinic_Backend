@@ -474,3 +474,29 @@ class ScheduleAlertEmailRequest(BaseModel):
         if not EMAIL_REGEX.match(clean):
             raise ValueError('Invalid email address format.')
         return clean
+
+class DoctorConsultEmailRequest(BaseModel):
+    to_doctor_email: str
+    doctor_name: str
+    patient_name: str
+    patient_mrn: Optional[str] = 'PT-NEW-001'
+    check_number: Optional[str] = 'CHK-2026-CURRENT'
+    alert_title: str
+    severity: str
+    interacting_drugs: List[str] = []
+    clinical_mechanism: str
+    substituted_medication: Optional[str] = ''
+    rationale: str
+    clinician_name: Optional[str] = 'Smile Clinic Prescriber'
+    clinician_email: Optional[str] = ''
+    notary_hash: Optional[str] = None
+    portal_url: Optional[str] = 'https://prescription-dentalclinic.pages.dev/alerts'
+
+    @field_validator('to_doctor_email')
+    @classmethod
+    def validate_doctor_email(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not EMAIL_REGEX.match(clean):
+            raise ValueError('Invalid doctor email address format.')
+        return clean
+
