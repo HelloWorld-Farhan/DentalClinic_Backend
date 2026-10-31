@@ -300,11 +300,17 @@ async def extract_prescription(file: UploadFile = File(...)):
     prompt = (
         "You are an expert clinical pharmacologist and medical document parser. "
         "Analyze this medical prescription or clinical document (which may be a PDF, handwriting scan, camera photo, Word document, or CSV table). "
-        "Extract doctor handwriting, abbreviations (e.g. TID, BID, PO, PRN, OD, HS, cap, tab, ℞), "
+        "Extract doctor handwriting, abbreviations (e.g. TID, BID, PO, PRN, OD, HS, cap, tab, ℞, BD PC, TDS, BBF), "
         "and normalize all dates to YYYY-MM-DD or standard readable formats.\n\n"
-        "Generate relevant clinical decision support rules & contraindication safety warnings for the prescribed medications "
-        "(e.g., drug-drug interactions, beta-lactam allergy contraindications, central nervous system depression warnings, "
-        "or organ clearance titrations).\n\n"
+        "Carefully read doctor handwriting and cross-reference pharmaceutical brand names against standard clinical pharmacopeias "
+        "(e.g., Tab. Cerom-CV 500, Tab. Pyrigesic 650, Tab. Pantop 40, Syp. Ascoril LS, Tab. Emlukast FX, Augmentin, etc.). "
+        "Do not hallucinate or guess non-existent brand variants.\n\n"
+        "Distinguish between active systemic pharmaceutical medications (e.g. tablets, capsules, oral syrups) and non-oral/supportive therapies "
+        "(e.g. steam inhalation, mouth gargle, throat sprays, rest).\n"
+        "- In 'medicines', extract only the active systemic pharmaceutical medications for clinical interaction cross-checking. Include exact dosage, frequency (e.g. 'Twice daily after meals (BD PC)', 'Three times daily (TDS)'), and course duration (e.g. '10 days', '7 days').\n"
+        "- In 'supportiveTherapies', list all non-systemic, inhalational, topical, or lifestyle therapies (e.g. 'Steam Inhalation with XL Vapo (TDS x 7 days)', 'Betadine Mouth Gargle 1:1 (TDS x 5 days)').\n"
+        "- In 'totalPrescribedCount', provide the total number of all numbered prescription items written on the slip (e.g. 7 if there are 5 medicines and 2 supportive therapies).\n\n"
+        "Generate relevant clinical decision support rules & contraindication safety warnings for the prescribed medications.\n\n"
         "Return ONLY a valid JSON object with EXACTLY this schema (do NOT wrap in markdown code blocks):\n"
         "{\n"
         '  "patient": {\n'
@@ -317,13 +323,15 @@ async def extract_prescription(file: UploadFile = File(...)):
         '    "vitals": "string or null",\n'
         '    "address": "string or null"\n'
         '  },\n'
+        '  "totalPrescribedCount": number,\n'
+        '  "supportiveTherapies": ["string"],\n'
         '  "medicines": [\n'
         '    {\n'
-        '      "drugName": "string",\n'
+        '      "drugName": "string (e.g. Tab. Cerom-CV 500)",\n'
         '      "genericName": "string",\n'
-        '      "dosage": "string (e.g. 500mg)",\n'
-        '      "frequency": "string (e.g. Every 8 hours / TID)",\n'
-        '      "duration": "string (e.g. 7 days)",\n'
+        '      "dosage": "string (e.g. 500mg or 5 ml)",\n'
+        '      "frequency": "string (e.g. Twice daily after meals (BD PC) or Three times daily (TDS))",\n'
+        '      "duration": "string (e.g. 10 days or 7 days)",\n'
         '      "route": "string (e.g. Oral (PO))",\n'
         '      "indication": "string"\n'
         '    }\n'
@@ -349,11 +357,16 @@ async def extract_prescription(file: UploadFile = File(...)):
             prompt=prompt,
             inline_data=inline_data
         )
+        meds = extracted.get("medicines", [])
+        supportive = extracted.get("supportiveTherapies", [])
+        total_count = extracted.get("totalPrescribedCount") or (len(meds) + len(supportive))
         return {
             "status": "success",
             "filename": file.filename,
             "patient": extracted.get("patient", {}),
-            "medicines": extracted.get("medicines", []),
+            "medicines": meds,
+            "totalPrescribedCount": total_count,
+            "supportiveTherapies": supportive,
             "rules": extracted.get("rules", [])
         }
     except HTTPException:
