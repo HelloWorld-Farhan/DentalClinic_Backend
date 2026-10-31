@@ -611,7 +611,7 @@ def toggle_single_rule(
 # ==========================================
 @router.get("/custom-questions")
 def get_user_custom_questions(
-    email: str = Query(..., description="Clinician email"),
+    email: Optional[str] = Query(None, description="Clinician email"),
     db: Session = Depends(get_db)
 ):
     norm_email = clean_email(email)
@@ -668,7 +668,7 @@ def save_user_custom_question(
 @router.delete("/custom-questions/{question_id}")
 def delete_user_custom_question(
     question_id: str,
-    email: str = Query(..., description="Clinician email"),
+    email: Optional[str] = Query(None, description="Clinician email"),
     db: Session = Depends(get_db)
 ):
     norm_email = clean_email(email)
@@ -826,7 +826,7 @@ Respond ONLY with valid JSON conforming to this schema:
 @router.get("/report-pdf")
 def get_or_generate_report_pdf(
     id: str = Query(..., description="Check / Report ID"),
-    email: str = Query(..., description="Clinician email"),
+    email: Optional[str] = Query(None, description="Clinician email"),
     db: Session = Depends(get_db)
 ):
     """
@@ -837,8 +837,8 @@ def get_or_generate_report_pdf(
     from ..pdf_generator import generate_2page_cds_pdf
     from .storage import upload_document_to_r2, get_s3_client, R2_BUCKET_NAME, R2_PUBLIC_URL
 
-    norm_email = clean_email(email)
     chk = db.query(PrescriptionCheck).filter(PrescriptionCheck.id == id).first()
+    norm_email = clean_email(email) if email else (chk.user_email if chk and chk.user_email else "consulting-doctor@smileclinic.com")
 
     report_id = id
     patient_name = chk.patient_name if chk else "Patient"
@@ -900,7 +900,7 @@ def get_or_generate_report_pdf(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f"attachment; filename={pdf_filename}",
+            "Content-Disposition": f"inline; filename={pdf_filename}",
             "Cache-Control": "no-cache"
         }
     )

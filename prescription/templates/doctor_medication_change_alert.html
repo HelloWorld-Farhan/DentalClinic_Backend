@@ -117,20 +117,29 @@
                 </p>
               </div>
 
-              <!-- CTA Button -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 26px;">
+              <!-- CTA Button: Directly opens the certified PDF in browser with NO login required -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 24px;">
                 <tr>
                   <td align="center">
-                    <a href="{{ review_url }}" style="display: inline-block; background: #005c65; color: #ffffff; text-decoration: none; font-size: 13.5px; font-weight: 700; padding: 12px 28px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 92, 101, 0.2);">
-                      Review Prescription Dossier in Portal →
+                    <a href="{{ pdf_url }}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #005c65; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 700; padding: 13px 28px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 92, 101, 0.25);">
+                      📄 Open Certified Clinical Dossier & Prescription (PDF) →
                     </a>
                   </td>
                 </tr>
+                {% if source_document_url %}
+                <tr>
+                  <td align="center" style="padding-top: 10px;">
+                    <a href="{{ source_document_url }}" target="_blank" rel="noopener noreferrer" style="color: #007782; font-size: 12px; font-weight: 600; text-decoration: underline;">
+                      📎 View Original Uploaded Prescription Slip (Direct Link)
+                    </a>
+                  </td>
+                </tr>
+                {% endif %}
               </table>
 
               <!-- Notary & Security Footer Box -->
               <div style="padding: 12px 14px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; font-size: 11px; color: #64748b; line-height: 1.5;">
-                <strong>Consulting Clinician:</strong> {{ clinician_name }} ({{ clinician_email }})<br>
+                <strong>Consulting Clinician:</strong> {{ clinician_name }}{% if clinician_email %} ({{ clinician_email }}){% endif %}<br>
                 <strong>Security Seal:</strong> <span style="font-family: monospace;">{{ notary_hash }}</span>
               </div>
 

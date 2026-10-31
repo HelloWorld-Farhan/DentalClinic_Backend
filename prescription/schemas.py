@@ -468,6 +468,7 @@ class ScheduleAlertEmailRequest(BaseModel):
     safety_alerts: List[Dict[str, Any]] = []
     notary_hash: Optional[str] = None
     portal_url: Optional[str] = 'https://prescription-dentalclinic.pages.dev/alerts'
+    pdf_url: Optional[str] = None
     source_document_url: Optional[str] = None
     source_document_name: Optional[str] = None
     pdf_base64: Optional[str] = None

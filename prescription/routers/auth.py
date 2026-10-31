@@ -2993,7 +2993,13 @@ def send_doctor_consult_email(req: DoctorConsultEmailRequest, db: Session = Depe
             "type": "application/pdf"
         })
 
-    # 7. Render Context
+    # 7. Render Context with Direct PDF Access (No Login Required)
+    backend_base = os.getenv("API_BASE_URL", "https://dental-backend-production.up.railway.app").rstrip("/")
+    resolved_pdf_url = req.pdf_url or (chk.pdf_url if chk and getattr(chk, 'pdf_url', None) else None)
+    if not resolved_pdf_url:
+        resolved_pdf_url = f"{backend_base}/api/v1/sync/report-pdf?id={clean_check_num}"
+    resolved_source_url = req.source_document_url or (chk.source_document_url if chk and getattr(chk, 'source_document_url', None) else None)
+
     context = {
         'prescriber_name': clean_doc_name,
         'doctor_name': clean_doc_name,
@@ -3006,10 +3012,13 @@ def send_doctor_consult_email(req: DoctorConsultEmailRequest, db: Session = Depe
         'interaction_mechanism': req.clinical_mechanism,
         'substituted_medication': req.substituted_medication,
         'clinical_notes': req.rationale,
-        'clinician_name': req.clinician_name or 'Authorized Clinician',
+        'clinician_name': req.clinician_name or 'Smile Clinic Prescriber',
         'clinician_email': req.clinician_email or '',
         'check_number': clean_check_num,
-        'review_url': req.portal_url or 'https://prescription-dentalclinic.pages.dev/alerts',
+        'pdf_url': resolved_pdf_url,
+        'download_url': resolved_pdf_url,
+        'source_document_url': resolved_source_url,
+        'review_url': resolved_pdf_url,
         'notary_hash': notary,
         'pdf_filename': cds_report_filename,
         'source_document_name': source_name
