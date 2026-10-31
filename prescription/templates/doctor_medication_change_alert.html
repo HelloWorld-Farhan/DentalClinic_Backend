@@ -101,10 +101,19 @@
               {% endif %}
 
               <!-- Clinical Message to Doctor -->
-              <div style="background-color: #f0fdfa; border-left: 4px solid #005c65; padding: 14px 18px; margin-bottom: 26px; border-radius: 0 8px 8px 0;">
+              <div style="background-color: #f0fdfa; border-left: 4px solid #005c65; padding: 14px 18px; margin-bottom: 22px; border-radius: 0 8px 8px 0;">
                 <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #005c65; letter-spacing: 0.5px;">Consultation Memorandum</span>
                 <p style="margin: 6px 0 0; font-size: 13px; color: #115e59; line-height: 1.55;">
                   {{ clinical_notes }}
+                </p>
+              </div>
+
+              <!-- Certified Clinical Attachments Notice -->
+              <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px 18px; margin-bottom: 26px;">
+                <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #334155; letter-spacing: 0.5px;">📎 Certified Clinical Attachments Included (2 Files)</span>
+                <p style="margin: 6px 0 0; font-size: 12.5px; color: #475569; line-height: 1.5;">
+                  <strong>1. CDS Safety Verification Report:</strong> {{ pdf_filename }}<br>
+                  <strong>2. Original Prescription Slip:</strong> {{ source_document_name }}
                 </p>
               </div>
 

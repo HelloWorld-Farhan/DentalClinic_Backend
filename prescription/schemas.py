@@ -458,9 +458,9 @@ class AuditEmailRequest(BaseModel):
 class ScheduleAlertEmailRequest(BaseModel):
     to_email: str
     patient_name: str
-    patient_mrn: Optional[str] = 'PT-NEW-001'
+    patient_mrn: Optional[str] = 'PS-FK-001'
     clinician_name: Optional[str] = 'Authorized Clinician'
-    check_number: Optional[str] = 'CHK-2026-CURRENT'
+    check_number: Optional[str] = 'PS-FK-001-Prescription_7'
     schedule_date: Optional[str] = None
     course_end_date: Optional[str] = None
     regimen_duration: Optional[str] = '1 Month (30 Days)'
@@ -468,6 +468,10 @@ class ScheduleAlertEmailRequest(BaseModel):
     safety_alerts: List[Dict[str, Any]] = []
     notary_hash: Optional[str] = None
     portal_url: Optional[str] = 'https://prescription-dentalclinic.pages.dev/alerts'
+    source_document_url: Optional[str] = None
+    source_document_name: Optional[str] = None
+    pdf_base64: Optional[str] = None
+    source_document_base64: Optional[str] = None
 
     @field_validator('to_email')
     @classmethod
@@ -481,8 +485,8 @@ class DoctorConsultEmailRequest(BaseModel):
     to_doctor_email: str
     doctor_name: str
     patient_name: str
-    patient_mrn: Optional[str] = 'PT-NEW-001'
-    check_number: Optional[str] = 'CHK-2026-CURRENT'
+    patient_mrn: Optional[str] = 'PS-FK-001'
+    check_number: Optional[str] = 'PS-FK-001-Prescription_7'
     alert_title: str
     severity: str
     interacting_drugs: List[str] = []
@@ -494,6 +498,10 @@ class DoctorConsultEmailRequest(BaseModel):
     cc_user_email: Optional[str] = None
     notary_hash: Optional[str] = None
     portal_url: Optional[str] = 'https://prescription-dentalclinic.pages.dev/alerts'
+    source_document_url: Optional[str] = None
+    source_document_name: Optional[str] = None
+    pdf_base64: Optional[str] = None
+    source_document_base64: Optional[str] = None
 
     @field_validator('to_doctor_email')
     @classmethod
