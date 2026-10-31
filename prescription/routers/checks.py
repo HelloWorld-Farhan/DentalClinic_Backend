@@ -270,15 +270,20 @@ async def execute_prescription_safety_check(
 
     # 2. Extract Active Synchronized Knowledge Sources
     knowledge_sources = payload.get("knowledge_sources") or {}
+    active_kb_name = knowledge_sources.get("active_kb_name")
     synced_docs = knowledge_sources.get("synced_documents") or []
     synced_checks = knowledge_sources.get("synced_checks") or []
+    synced_conditions = knowledge_sources.get("synced_conditions") or []
     knowledge_context = ""
-    if synced_docs or synced_checks:
+    if synced_docs or synced_checks or synced_conditions or active_kb_name:
+        kb_title_line = f"- Active Knowledge Base: '{active_kb_name}'\n" if active_kb_name else ""
         knowledge_context = (
             f"[Active Synchronized Clinical Knowledge Sources]:\n"
+            f"{kb_title_line}"
             f"- Synchronized Patient History Documents: {', '.join(synced_docs) if synced_docs else 'None'}\n"
+            f"- Synchronized Clinical Conditions: {', '.join(synced_conditions) if synced_conditions else 'None'}\n"
             f"- Synchronized Prior Regimens: {', '.join(synced_checks) if synced_checks else 'None'}\n"
-            f"NOTE: The clinician specifically selected these active medical history sources (and excluded any unselected history). "
+            f"NOTE: The clinician specifically selected this Knowledge Base ({active_kb_name or 'Active Profile'}) containing these active medical history sources (and excluded all other unselected history). "
             f"Evaluate the newly prescribed medications strictly and specifically against the patient's synchronized active clinical history.\n\n"
         )
 
