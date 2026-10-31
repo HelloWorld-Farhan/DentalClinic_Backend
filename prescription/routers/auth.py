@@ -853,147 +853,46 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 
 
 
-    # 5. Check Security Verification (2FA / Remember Device / New Device Detection / Revoked Device)
-
+    # 5. Check Security Verification (2FA / Remember Device / New Device Detection)
     two_fa_active = bool(getattr(user, 'two_factor_enabled', False))
-
     device_recognized = is_device_remembered(user, payload.device_id)
 
-
-
-    # Check if this specific device was logged out / revoked from Settings
-
-    is_revoked_in_db = False
-
-    if payload.device_id:
-
-        dev_id_clean = payload.device_id.strip()
-
-        active_sess = (
-
-            db.query(UserSession)
-
-            .filter(
-
-                UserSession.email == email_clean,
-
-                UserSession.device_id == dev_id_clean,
-
-                UserSession.is_active == True
-
-            )
-
-            .first()
-
-        )
-
-        if not active_sess:
-
-            revoked_sess = (
-
-                db.query(UserSession)
-
-                .filter(
-
-                    UserSession.email == email_clean,
-
-                    UserSession.device_id == dev_id_clean,
-
-                    UserSession.is_active == False
-
-                )
-
-                .first()
-
-            )
-
-            if revoked_sess:
-
-                is_revoked_in_db = True
-
-                # Purge from remembered devices to ensure no stale token remains
-
-                remove_user_remembered_device(user, dev_id_clean)
-
-                db.commit()
-
-
-
     # Mandatory OTP is triggered if:
-
     # 1. 2FA is explicitly enabled on account, OR
-
     # 2. "Remember me" is turned off (payload.remember_device is False), OR
-
-    # 3. This device is logging in for the first time (not yet in remembered list), even if remember_device is True!
-
-    # 4. This device was logged out / revoked from Settings (is_revoked_in_db is True)!
-
-    if two_fa_active or (not payload.remember_device) or (not device_recognized) or is_revoked_in_db:
-
+    # 3. This device is logging in for the first time on this workstation (not yet in remembered list)
+    if two_fa_active or (not payload.remember_device) or (not device_recognized):
         otp_code = generate_numeric_otp(6)
-
         expires_at = now + timedelta(minutes=10)
-
         db.query(AuthOtp).filter(AuthOtp.email == email_clean).delete()
-
         db.add(AuthOtp(email=email_clean, otp_code=otp_code, expires_at=expires_at))
-
         db.commit()
 
-
-
         send_template_email(
-
             to_email=email_clean,
-
             subject=f"Smile Clinic — Sign-In Verification Code: {otp_code}",
-
             template_name="otp_verification.html",
-
             context={
-
                 "clinician_name": user.full_name,
-
                 "otp_code": otp_code,
-
                 "expires_in_minutes": 10
-
             }
-
         )
-
-
 
         if two_fa_active:
-
             msg = "Two-factor verification required. A 6-digit sign-in code has been dispatched to your email."
-
-        elif is_revoked_in_db:
-
-            msg = "Workstation re-authorization required. A 6-digit verification code has been dispatched to your email."
-
         elif not device_recognized:
-
             msg = "New workstation detected. For clinical security, a 6-digit verification code has been dispatched to your email."
-
+        elif not payload.remember_device:
+            msg = "'Remember me on this workstation' is unselected. A 6-digit verification code has been dispatched to your email."
         else:
-
             msg = "Sign-in verification required. A 6-digit verification code has been dispatched to your email."
 
-
-
         return AuthResponse(
-
             status="otp_required",
-
             message=msg,
-
             dev_otp=otp_code
-
         )
-
-
 
     # If device is recognized and remember_device is True: direct login without OTP friction
 
