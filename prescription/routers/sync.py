@@ -2,6 +2,7 @@ import re
 from datetime import datetime, timezone
 from typing import List, Optional, Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 from ..database import get_db
@@ -71,7 +72,7 @@ def get_all_user_data(
 
     rules = (
         db.query(ClinicalRule)
-        .filter(ClinicalRule.user_email == norm_email)
+        .filter(or_(ClinicalRule.user_email == norm_email, ClinicalRule.user_email == "global", ClinicalRule.user_email.is_(None)))
         .order_by(ClinicalRule.created_at.desc())
         .all()
     )
@@ -378,6 +379,22 @@ def batch_push_user_data(
                     current_medications=p.get("currentMedications") or [],
                 )
             )
+
+    # 6. Upsert synced knowledge state if present
+    synced_kb = payload.get("syncedKnowledge")
+    if synced_kb:
+        notif_state = db.query(UserNotificationState).filter(UserNotificationState.user_email == norm_email).first()
+        if not notif_state:
+            notif_state = UserNotificationState(
+                id=norm_email,
+                user_email=norm_email,
+                synced_knowledge=synced_kb,
+            )
+            db.add(notif_state)
+        else:
+            notif_state.synced_knowledge = synced_kb
+            notif_state.updated_at = datetime.now(timezone.utc)
+            flag_modified(notif_state, "synced_knowledge")
 
     db.commit()
     return {"status": "success", "message": "Batch synced successfully to Supabase cloud"}
@@ -963,6 +980,7 @@ def update_synced_knowledge_state(
     else:
         state.synced_knowledge = synced_knowledge
         state.updated_at = datetime.now(timezone.utc)
+        flag_modified(state, "synced_knowledge")
 
     db.commit()
     return {
