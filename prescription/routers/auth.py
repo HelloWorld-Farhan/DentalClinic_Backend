@@ -2558,7 +2558,7 @@ def send_report_email(req: ReportEmailRequest, db: Session = Depends(get_db)):
 
     backend_base = os.getenv("BACKEND_URL", "https://dentalclinic-backend-eiav.onrender.com").rstrip("/")
     download_url = req.download_url or f"{backend_base}/api/v1/sync/report-pdf?id={req.report_id}&email={target_email}"
-    pdf_filename = req.pdf_filename or f"SmileClinic_CDS_Report_{req.report_id}.pdf"
+    pdf_filename = req.pdf_filename or (f"{req.report_id}.pdf" if ("PS-" in req.report_id or "Prescription" in req.report_id) else f"SmileClinic_CDS_Report_{req.report_id}.pdf")
 
     # Structured inquiries from request or database
     inquiries_list = req.question_answers or (chk.clinical_inquiries if chk and chk.clinical_inquiries else [])

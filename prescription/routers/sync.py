@@ -877,7 +877,7 @@ def get_or_generate_report_pdf(
     })
 
     # Save to Cloudflare R2 and update Supabase
-    pdf_filename = f"SmileClinic_CDS_Report_{report_id}.pdf"
+    pdf_filename = f"{report_id}.pdf" if ("PS-" in report_id or "Prescription" in report_id) else f"SmileClinic_CDS_Report_{report_id}.pdf"
     try:
         s3 = get_s3_client()
         if s3:

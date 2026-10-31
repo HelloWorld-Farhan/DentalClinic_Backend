@@ -245,7 +245,16 @@ async def execute_prescription_safety_check(
     rules = payload.get("rules") or []
     raw_inquiries = payload.get("clinical_inquiries") or []
 
-    check_id = f"CHK-2026-{int(now_ms % 100000):05d}"
+    req_check_id = payload.get("check_id") or payload.get("check_number")
+    if req_check_id and str(req_check_id).strip():
+        check_id = str(req_check_id).strip()
+    else:
+        pat_mrn = patient.get("mrn") or "PS-FK-001"
+        src_name = payload.get("source_document_name") or "Prescription_7"
+        doc_base = os.path.splitext(os.path.basename(src_name))[0]
+        match_rx = re.search(r'(?:prescription|rx)[\s_.-]*([0-9a-zA-Z]+)', doc_base, re.I)
+        doc_tag = f"Prescription_{match_rx.group(1)}" if match_rx else (doc_base or "Prescription_7")
+        check_id = f"{pat_mrn}-{doc_tag}"
     digital_seal = hashlib.sha256(f"{check_id}:{user_email}:{now_ms}:{json.dumps(prescriptions)}".encode("utf-8")).hexdigest()
 
     # 1. RxNorm normalization
@@ -383,9 +392,10 @@ async def execute_prescription_safety_check(
     s3 = get_s3_client()
     pdf_url, word_url, csv_url = "", "", ""
 
-    pdf_key = f"users/{user_email}/report/pdf/{now_ms}_CDS_Report_{check_id}.pdf"
-    docx_key = f"users/{user_email}/report/word/{now_ms}_Consultation_{check_id}.docx"
-    csv_key = f"users/{user_email}/report/csv/{now_ms}_Export_{check_id}.csv"
+    pdf_filename = f"{check_id}.pdf"
+    pdf_key = f"users/{user_email}/report/pdf/{now_ms}_{pdf_filename}"
+    docx_key = f"users/{user_email}/report/word/{now_ms}_{check_id}.docx"
+    csv_key = f"users/{user_email}/report/csv/{now_ms}_{check_id}.csv"
 
     if s3:
         try:
@@ -415,7 +425,7 @@ async def execute_prescription_safety_check(
                 highest_severity=highest_severity.lower(),
                 reviewer_name=clinician_name,
                 status=overall_status,
-                pdf_filename=f"CDS_Report_{check_id}.pdf",
+                pdf_filename=pdf_filename,
                 pdf_url=pdf_url,
                 word_url=word_url,
                 csv_url=csv_url,
@@ -438,7 +448,7 @@ async def execute_prescription_safety_check(
                 patient_mrn=patient.get("mrn"),
                 event_details=f"SmileClinic CDS verified {len(evaluated_meds)} items against monograph and clinical rules",
                 severity=highest_severity.upper(),
-                pdf_filename=f"CDS_Report_{check_id}.pdf",
+                pdf_filename=pdf_filename,
                 pdf_url=pdf_url,
                 hash=digital_seal,
                 timestamp_ms=now_ms,
