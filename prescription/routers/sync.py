@@ -114,6 +114,12 @@ def get_all_user_data(
                 "status": c.status,
                 "pdfFilename": c.pdf_filename,
                 "pdfUrl": c.pdf_url,
+                "wordUrl": getattr(c, "word_url", None),
+                "csvUrl": getattr(c, "csv_url", None),
+                "clinicalInquiries": getattr(c, "clinical_inquiries", None) or [],
+                "inquiryAnswers": getattr(c, "clinical_inquiries", None) or [],
+                "questionAnswers": getattr(c, "clinical_inquiries", None) or [],
+                "patientVitals": getattr(c, "patient_vitals", None) or {},
                 "sourceDocumentUrl": getattr(c, "source_document_url", None),
                 "sourceDocumentName": getattr(c, "source_document_name", None),
                 "sourceType": getattr(c, "source_type", None),
@@ -234,8 +240,15 @@ def batch_push_user_data(
             existing.source_document_url = c.get("sourceDocumentUrl") or existing.source_document_url
             existing.source_document_name = c.get("sourceDocumentName") or existing.source_document_name
             existing.source_type = c.get("sourceType") or existing.source_type
+            existing.word_url = c.get("wordUrl") or getattr(existing, "word_url", None)
+            existing.csv_url = c.get("csvUrl") or getattr(existing, "csv_url", None)
+            existing.clinical_inquiries = c.get("clinicalInquiries") or c.get("inquiryAnswers") or c.get("questionAnswers") or getattr(existing, "clinical_inquiries", None)
+            existing.patient_vitals = c.get("patientVitals") or getattr(existing, "patient_vitals", None)
+            existing.status = c.get("status") or c.get("overallStatus") or existing.status
             flag_modified(existing, "alerts")
             flag_modified(existing, "prescriptions")
+            if existing.clinical_inquiries:
+                flag_modified(existing, "clinical_inquiries")
         else:
             db.add(
                 PrescriptionCheck(
@@ -251,6 +264,10 @@ def batch_push_user_data(
                     status=c.get("status") or "safe",
                     pdf_filename=c.get("pdfFilename"),
                     pdf_url=c.get("pdfUrl"),
+            word_url=c.get("wordUrl"),
+            csv_url=c.get("csvUrl"),
+            clinical_inquiries=c.get("clinicalInquiries") or c.get("inquiryAnswers") or c.get("questionAnswers") or [],
+            patient_vitals=c.get("patientVitals") or {},
             source_document_url=c.get("sourceDocumentUrl"),
             source_document_name=c.get("sourceDocumentName"),
             source_type=c.get("sourceType"),
@@ -389,9 +406,15 @@ def save_single_check(payload: Dict[str, Any] = Body(...), db: Session = Depends
         existing.source_document_url = c.get("sourceDocumentUrl") or existing.source_document_url
         existing.source_document_name = c.get("sourceDocumentName") or existing.source_document_name
         existing.source_type = c.get("sourceType") or existing.source_type
+        existing.word_url = c.get("wordUrl") or getattr(existing, "word_url", None)
+        existing.csv_url = c.get("csvUrl") or getattr(existing, "csv_url", None)
+        existing.clinical_inquiries = c.get("clinicalInquiries") or c.get("inquiryAnswers") or c.get("questionAnswers") or getattr(existing, "clinical_inquiries", None)
+        existing.patient_vitals = c.get("patientVitals") or getattr(existing, "patient_vitals", None)
         existing.status = c.get("status") or c.get("overallStatus") or existing.status
         flag_modified(existing, "alerts")
         flag_modified(existing, "prescriptions")
+        if existing.clinical_inquiries:
+            flag_modified(existing, "clinical_inquiries")
     else:
         existing = PrescriptionCheck(
             id=cid,
@@ -406,6 +429,13 @@ def save_single_check(payload: Dict[str, Any] = Body(...), db: Session = Depends
             status=c.get("status") or "safe",
             pdf_filename=c.get("pdfFilename"),
             pdf_url=c.get("pdfUrl"),
+            word_url=c.get("wordUrl"),
+            csv_url=c.get("csvUrl"),
+            clinical_inquiries=c.get("clinicalInquiries") or c.get("inquiryAnswers") or c.get("questionAnswers") or [],
+            patient_vitals=c.get("patientVitals") or {},
+            source_document_url=c.get("sourceDocumentUrl"),
+            source_document_name=c.get("sourceDocumentName"),
+            source_type=c.get("sourceType"),
             notes=c.get("notes"),
             digital_seal=c.get("digitalSeal") or c.get("hash"),
             timestamp_ms=c.get("timestampMs") or int(datetime.now(timezone.utc).timestamp() * 1000),
