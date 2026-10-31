@@ -2990,7 +2990,40 @@ def send_doctor_consult_email(req: DoctorConsultEmailRequest, db: Session = Depe
         db.commit()
     except Exception as e:
         print(f"[Doctor Consult Audit Warning] {e}")
-        
+
+    # 8b. Automatically persist recipient doctor to UserNotificationState.saved_doctors in PostgreSQL
+    try:
+        from ..models import UserNotificationState
+        from sqlalchemy.orm.attributes import flag_modified
+        c_user_email = (req.clinician_email or req.cc_user_email or "").strip().lower()
+        if c_user_email and req.to_doctor_email:
+            st = db.query(UserNotificationState).filter(UserNotificationState.user_email == c_user_email).first()
+            if not st:
+                st = UserNotificationState(
+                    id=c_user_email,
+                    user_email=c_user_email,
+                    saved_doctors=[]
+                )
+                db.add(st)
+            doc_list = list(st.saved_doctors or [])
+            to_clean = req.to_doctor_email.strip().lower()
+            filtered = [d for d in doc_list if isinstance(d, dict) and d.get("email", "").strip().lower() != to_clean]
+            now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+            entry = {
+                "id": f"doc-{now_ms}",
+                "name": clean_doc_name,
+                "email": to_clean,
+                "phone": getattr(req, "clinician_phone", "") or "",
+                "specialty": "Consulting Physician",
+                "lastUsed": now_ms,
+            }
+            st.saved_doctors = [entry] + filtered
+            st.updated_at = datetime.now(timezone.utc)
+            flag_modified(st, "saved_doctors")
+            db.commit()
+    except Exception as d_err:
+        print(f"[Saved Doctor Auto-Persist Warning] {d_err}")
+
     return {
         'status': 'success' if delivered else 'sent_local',
         'message': f"Clinical consultation notice and both prescription documents successfully dispatched to Dr. {clean_doc_name} ({req.to_doctor_email})",

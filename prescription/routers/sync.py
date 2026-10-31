@@ -98,6 +98,42 @@ def get_all_user_data(
         .first()
     )
 
+    # Aggregate saved doctors from UserNotificationState AND from all checks' alert records
+    all_docs_map = {}
+    if notif_state and hasattr(notif_state, "saved_doctors") and isinstance(notif_state.saved_doctors, list):
+        for d in notif_state.saved_doctors:
+            if isinstance(d, dict) and d.get("email"):
+                all_docs_map[d["email"].strip().lower()] = d
+
+    for c in checks:
+        if isinstance(c.alerts, list):
+            for a in c.alerts:
+                if isinstance(a, dict) and (a.get("overridden") or a.get("overrideReason")):
+                    d_email = a.get("doctorEmail")
+                    d_name = a.get("doctorName")
+                    if not d_email or not d_name:
+                        reason = a.get("overrideReason") or ""
+                        m = re.search(r'Dr\.?\s*([^(\],]+)(?:\s*\(([^)]+)\))?', reason, re.I)
+                        if m and m.group(1):
+                            d_name = d_name or m.group(1).strip()
+                            d_email = d_email or (m.group(2).strip() if m.group(2) else None)
+                        m2 = re.search(r'\[Prescriber:\s*([^(\],]+)(?:\s*\(([^)]+)\))?\]', reason, re.I)
+                        if m2 and m2.group(1):
+                            d_name = d_name or m2.group(1).strip()
+                            d_email = d_email or (m2.group(2).strip() if m2.group(2) else None)
+                    if d_email:
+                        de_clean = d_email.strip().lower()
+                        if de_clean not in all_docs_map:
+                            dn_clean = re.sub(r'^(?:dr|doctor)\.?\s*', '', (d_name or '').strip(), flags=re.I).strip() or de_clean
+                            all_docs_map[de_clean] = {
+                                "id": f"doc-chk-{c.id}",
+                                "name": dn_clean,
+                                "email": de_clean,
+                                "specialty": "Consulting Physician",
+                                "lastUsed": c.timestamp_ms or int(datetime.now(timezone.utc).timestamp() * 1000),
+                            }
+    merged_saved_doctors = sorted(all_docs_map.values(), key=lambda x: x.get("lastUsed", 0), reverse=True)
+
     return {
         "status": "success",
         "email": norm_email,
@@ -211,7 +247,7 @@ def get_all_user_data(
         "syncedKnowledge": notif_state.synced_knowledge if notif_state and notif_state.synced_knowledge else None,
         "masterEmailAlertsEnabled": notif_state.master_email_alerts_enabled if notif_state and hasattr(notif_state, "master_email_alerts_enabled") and notif_state.master_email_alerts_enabled is not None else True,
         "disabledMedAlertIds": notif_state.disabled_med_alert_ids if notif_state and hasattr(notif_state, "disabled_med_alert_ids") and notif_state.disabled_med_alert_ids is not None else [],
-        "savedDoctors": notif_state.saved_doctors if notif_state and hasattr(notif_state, "saved_doctors") and notif_state.saved_doctors else [],
+        "savedDoctors": merged_saved_doctors,
     }
 
 # ==========================================
