@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import List, Optional, Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 from ..database import get_db
 from ..models import (
     PrescriptionCheck,
@@ -132,6 +133,7 @@ def get_all_user_data(
                 "patientMrn": a.patient_mrn,
                 "patientName": (a.inner_data or {}).get("patientName") if isinstance(a.inner_data, dict) else a.patient_mrn,
                 "eventDetails": a.event_details,
+                "details": a.event_details,
                 "severity": a.severity,
                 "pdfFilename": a.pdf_filename,
                 "pdfUrl": a.pdf_url,
@@ -199,6 +201,8 @@ def get_all_user_data(
         "readNotificationIds": notif_state.read_notification_ids if notif_state and notif_state.read_notification_ids else [],
 
         "syncedKnowledge": notif_state.synced_knowledge if notif_state and notif_state.synced_knowledge else None,
+        "masterEmailAlertsEnabled": notif_state.master_email_alerts_enabled if notif_state and hasattr(notif_state, "master_email_alerts_enabled") and notif_state.master_email_alerts_enabled is not None else True,
+        "disabledMedAlertIds": notif_state.disabled_med_alert_ids if notif_state and hasattr(notif_state, "disabled_med_alert_ids") and notif_state.disabled_med_alert_ids is not None else [],
     }
 
 # ==========================================
@@ -230,6 +234,8 @@ def batch_push_user_data(
             existing.source_document_url = c.get("sourceDocumentUrl") or existing.source_document_url
             existing.source_document_name = c.get("sourceDocumentName") or existing.source_document_name
             existing.source_type = c.get("sourceType") or existing.source_type
+            flag_modified(existing, "alerts")
+            flag_modified(existing, "prescriptions")
         else:
             db.add(
                 PrescriptionCheck(
@@ -269,7 +275,7 @@ def batch_push_user_data(
                     action=a.get("action") or "Safety Screen Initiated",
                     clinician_name=a.get("clinicianName") or "Authorized Clinician",
                     patient_mrn=a.get("patientMrn") or "PT-GENERAL",
-                    event_details=a.get("eventDetails") or "",
+                    event_details=a.get("eventDetails") or a.get("details") or "",
                     severity=a.get("severity") or "SAFE",
                     pdf_filename=a.get("pdfFilename"),
                     pdf_url=a.get("pdfUrl"),
@@ -383,6 +389,9 @@ def save_single_check(payload: Dict[str, Any] = Body(...), db: Session = Depends
         existing.source_document_url = c.get("sourceDocumentUrl") or existing.source_document_url
         existing.source_document_name = c.get("sourceDocumentName") or existing.source_document_name
         existing.source_type = c.get("sourceType") or existing.source_type
+        existing.status = c.get("status") or c.get("overallStatus") or existing.status
+        flag_modified(existing, "alerts")
+        flag_modified(existing, "prescriptions")
     else:
         existing = PrescriptionCheck(
             id=cid,
@@ -455,7 +464,7 @@ def save_single_audit_log(payload: Dict[str, Any] = Body(...), db: Session = Dep
                 action=a.get("action") or "Safety Screen Initiated",
                 clinician_name=a.get("clinicianName") or "Authorized Clinician",
                 patient_mrn=a.get("patientMrn") or "PT-GENERAL",
-                event_details=a.get("eventDetails") or "",
+                event_details=a.get("eventDetails") or a.get("details") or "",
                 severity=a.get("severity") or "SAFE",
                 pdf_filename=a.get("pdfFilename"),
                 pdf_url=a.get("pdfUrl"),
@@ -930,3 +939,37 @@ def update_synced_knowledge_state(
         "status": "success",
         "syncedKnowledge": state.synced_knowledge
     }
+
+@router.post("/alert-settings")
+def update_alert_settings(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db)
+):
+    email = clean_email(payload.get("email"))
+    master_email_alerts_enabled = payload.get("masterEmailAlertsEnabled")
+    disabled_med_alert_ids = payload.get("disabledMedAlertIds")
+
+    state = db.query(UserNotificationState).filter(UserNotificationState.user_email == email).first()
+    if not state:
+        state = UserNotificationState(
+            id=email,
+            user_email=email,
+            master_email_alerts_enabled=master_email_alerts_enabled if master_email_alerts_enabled is not None else True,
+            disabled_med_alert_ids=disabled_med_alert_ids if disabled_med_alert_ids is not None else [],
+        )
+        db.add(state)
+    else:
+        if master_email_alerts_enabled is not None:
+            state.master_email_alerts_enabled = bool(master_email_alerts_enabled)
+        if disabled_med_alert_ids is not None:
+            state.disabled_med_alert_ids = list(disabled_med_alert_ids)
+            flag_modified(state, "disabled_med_alert_ids")
+        state.updated_at = datetime.now(timezone.utc)
+
+    db.commit()
+    return {
+        "status": "success",
+        "masterEmailAlertsEnabled": state.master_email_alerts_enabled,
+        "disabledMedAlertIds": state.disabled_med_alert_ids,
+    }
+

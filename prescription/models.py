@@ -161,5 +161,7 @@ class UserNotificationState(Base):
     read_notification_ids = Column(JSON, nullable=True)
     notifications_read_at = Column(BigInteger, default=0)
     synced_knowledge = Column(JSON, nullable=True)
+    master_email_alerts_enabled = Column(Boolean, default=True)
+    disabled_med_alert_ids = Column(JSON, nullable=True)
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
