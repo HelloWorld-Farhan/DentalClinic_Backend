@@ -137,9 +137,26 @@
                 {% endif %}
               </table>
 
+              <!-- Consulting Clinician Direct Contact for Forward Purpose -->
+              <div style="background-color: #f0fdfa; border: 1.5px solid #005c65; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px;">
+                <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #005c65; letter-spacing: 0.5px;">📞 Attending Clinician Direct Contact (Call / Follow-Up)</span>
+                <p style="margin: 6px 0 0; font-size: 13.5px; color: #0f172a; line-height: 1.6;">
+                  <strong>Attending Clinician:</strong> {{ clinician_name }}<br>
+                  {% if clinician_phone %}
+                  <strong>Telephone / Cell:</strong> <a href="tel:{{ clinician_phone }}" style="color: #005c65; font-weight: 800; text-decoration: none;">{{ clinician_phone }}</a><br>
+                  {% endif %}
+                  {% if clinician_email %}
+                  <strong>Direct Email:</strong> <a href="mailto:{{ clinician_email }}" style="color: #005c65; font-weight: 700; text-decoration: none;">{{ clinician_email }}</a>
+                  {% endif %}
+                </p>
+                <p style="margin: 6px 0 0; font-size: 11.5px; color: #005c65; font-style: italic; line-height: 1.4;">
+                  Please contact the attending clinician directly using the phone number or email above for case coordination or regimen clearance.
+                </p>
+              </div>
+
               <!-- Notary & Security Footer Box -->
               <div style="padding: 12px 14px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; font-size: 11px; color: #64748b; line-height: 1.5;">
-                <strong>Consulting Clinician:</strong> {{ clinician_name }}{% if clinician_email %} ({{ clinician_email }}){% endif %}<br>
+                <strong>Attending Clinician:</strong> {{ clinician_name }}<br>
                 <strong>Security Seal:</strong> <span style="font-family: monospace;">{{ notary_hash }}</span>
               </div>
 

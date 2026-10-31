@@ -2913,6 +2913,8 @@ def send_doctor_consult_email(req: DoctorConsultEmailRequest, db: Session = Depe
         'clinical_notes': req.rationale,
         'clinician_name': req.clinician_name or 'Smile Clinic Prescriber',
         'clinician_email': req.clinician_email or '',
+        'clinician_phone': getattr(req, 'clinician_phone', '') or '',
+        'doctor_email': req.to_doctor_email,
         'check_number': clean_check_num,
         'pdf_url': resolved_pdf_url,
         'download_url': resolved_pdf_url,
@@ -2936,6 +2938,24 @@ def send_doctor_consult_email(req: DoctorConsultEmailRequest, db: Session = Depe
         cc=cc_user,
         attachments=attachments_list
     )
+    
+    # 7b. Dispatch confirmation copy to the logged-in clinician with attached dossier
+    user_target = (req.clinician_email or '').strip()
+    user_delivered = False
+    if user_target and '@' in user_target:
+        user_subject = f"Dispatched: Prescription Safety Consultation Alert Sent to Dr. {clean_doc_name} [{clean_check_num}]"
+        try:
+            user_delivered = send_transactional_email(
+                user_target,
+                user_subject,
+                'clinician_alert_dispatch_confirmation.html',
+                context,
+                attachment_base64=dossier_b64,
+                attachment_name=dossier_filename,
+                attachments=attachments_list
+            )
+        except Exception as ue:
+            print(f"[User Confirmation Dispatch Note] {ue}")
     
     # 8. Immutable audit logging into PostgreSQL database
     try:

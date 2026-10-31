@@ -113,6 +113,7 @@ def get_all_user_data(
                 "highestSeverity": c.highest_severity,
                 "reviewerName": c.reviewer_name,
                 "status": c.status,
+                "overallStatus": c.status,
                 "pdfFilename": c.pdf_filename,
                 "pdfUrl": c.pdf_url,
                 "wordUrl": getattr(c, "word_url", None),
@@ -210,6 +211,7 @@ def get_all_user_data(
         "syncedKnowledge": notif_state.synced_knowledge if notif_state and notif_state.synced_knowledge else None,
         "masterEmailAlertsEnabled": notif_state.master_email_alerts_enabled if notif_state and hasattr(notif_state, "master_email_alerts_enabled") and notif_state.master_email_alerts_enabled is not None else True,
         "disabledMedAlertIds": notif_state.disabled_med_alert_ids if notif_state and hasattr(notif_state, "disabled_med_alert_ids") and notif_state.disabled_med_alert_ids is not None else [],
+        "savedDoctors": notif_state.saved_doctors if notif_state and hasattr(notif_state, "saved_doctors") and notif_state.saved_doctors else [],
     }
 
 # ==========================================
@@ -1021,3 +1023,33 @@ def update_alert_settings(
         "disabledMedAlertIds": state.disabled_med_alert_ids,
     }
 
+
+
+@router.post("/saved-doctors")
+def update_saved_doctors(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db)
+):
+    email = clean_email(payload.get("email"))
+    doctors = payload.get("savedDoctors", [])
+    if not isinstance(doctors, list):
+        raise HTTPException(status_code=400, detail="savedDoctors must be a list")
+
+    state = db.query(UserNotificationState).filter(UserNotificationState.user_email == email).first()
+    if not state:
+        state = UserNotificationState(
+            id=email,
+            user_email=email,
+            saved_doctors=doctors,
+        )
+        db.add(state)
+    else:
+        state.saved_doctors = doctors
+        state.updated_at = datetime.now(timezone.utc)
+        flag_modified(state, "saved_doctors")
+
+    db.commit()
+    return {
+        "status": "success",
+        "savedDoctors": state.saved_doctors or []
+    }

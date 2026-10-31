@@ -399,6 +399,7 @@ class ReportEmailRequest(BaseModel):
     alerts_summary: Optional[str] = 'No Contraindicated Interactions Detected.'
     alerts_count: Optional[int] = 0
     portal_url: Optional[str] = 'https://prescription-dentalclinic.pages.dev/report'
+    pdf_url: Optional[str] = None
     download_url: Optional[str] = None
     pdf_filename: Optional[str] = None
     pdf_base64: Optional[str] = None
@@ -469,6 +470,7 @@ class ScheduleAlertEmailRequest(BaseModel):
     notary_hash: Optional[str] = None
     portal_url: Optional[str] = 'https://prescription-dentalclinic.pages.dev/alerts'
     pdf_url: Optional[str] = None
+    pdf_url: Optional[str] = None
     source_document_url: Optional[str] = None
     source_document_name: Optional[str] = None
     pdf_base64: Optional[str] = None
@@ -496,9 +498,11 @@ class DoctorConsultEmailRequest(BaseModel):
     rationale: str
     clinician_name: Optional[str] = 'Smile Clinic Prescriber'
     clinician_email: Optional[str] = ''
+    clinician_phone: Optional[str] = ''
     cc_user_email: Optional[str] = None
     notary_hash: Optional[str] = None
     portal_url: Optional[str] = 'https://prescription-dentalclinic.pages.dev/alerts'
+    pdf_url: Optional[str] = None
     source_document_url: Optional[str] = None
     source_document_name: Optional[str] = None
     pdf_base64: Optional[str] = None

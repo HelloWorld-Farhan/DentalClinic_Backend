@@ -153,41 +153,19 @@ def test_remember_device_flows(test_user):
     assert res_toggle_off.json()["user"]["twoFactorEnabled"] is False
     print("[PASS] 2FA disabled successfully.")
 
-    # 1. Login with remember_device=True and 2FA disabled -> First time on new device requires OTP, then subsequent login is remembered
-    print("1. Testing login with 2FA disabled & remember_device=True on new device...")
-    res_first = client.post("/api/v1/auth/login", json={
+    # 1. Login with remember_device=True and 2FA disabled -> Direct login, no OTP required
+    print("1. Testing login with 2FA disabled & remember_device=True...")
+    res_remembered = client.post("/api/v1/auth/login", json={
         "email": email,
         "password": password,
         "remember_device": True,
         "device_id": "test_trusted_device_01"
     })
-    print("First Time Device Login Status:", res_first.status_code, res_first.json())
-    assert res_first.status_code == 200
-    if res_first.json().get("status") == "otp_required":
-        dev_otp = res_first.json().get("dev_otp")
-        v_res = client.post("/api/v1/auth/verify-login-otp", json={
-            "email": email,
-            "otp_code": dev_otp,
-            "remember_device": True,
-            "device_id": "test_trusted_device_01"
-        })
-        assert v_res.status_code == 200
-        assert v_res.json().get("token") is not None
-
-        # Subsequent login from the now-remembered device -> direct success
-        res_remembered = client.post("/api/v1/auth/login", json={
-            "email": email,
-            "password": password,
-            "remember_device": True,
-            "device_id": "test_trusted_device_01"
-        })
-        assert res_remembered.status_code == 200
-        assert res_remembered.json()["status"] == "success"
-        assert res_remembered.json()["token"] is not None
-    else:
-        assert res_first.json()["status"] == "success"
-        assert res_first.json()["token"] is not None
-    print("[PASS] Remember Device flow verified.")
+    print("Remembered Device Login Status:", res_remembered.status_code, res_remembered.json())
+    assert res_remembered.status_code == 200
+    assert res_remembered.json()["status"] == "success"
+    assert res_remembered.json()["token"] is not None
+    print("[PASS] Remember Device=True allows direct access without OTP.")
 
     # 2. Toggle 2FA back ON -> Enforces OTP requirement even with remember_device=True
     print("2. Testing toggle-2fa endpoint to enable 2FA...")

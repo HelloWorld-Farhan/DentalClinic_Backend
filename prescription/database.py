@@ -100,6 +100,8 @@ def ensure_schema_compatibility(target_engine):
                     conn.execute(text("ALTER TABLE user_notification_states ADD COLUMN master_email_alerts_enabled BOOLEAN DEFAULT TRUE"))
                 if "disabled_med_alert_ids" not in uns_cols:
                     conn.execute(text("ALTER TABLE user_notification_states ADD COLUMN disabled_med_alert_ids JSON"))
+                if "saved_doctors" not in uns_cols:
+                    conn.execute(text("ALTER TABLE user_notification_states ADD COLUMN saved_doctors JSON"))
                 conn.commit()
     except Exception as e:
         print(f"[DB Schema Notice] Schema check: {e}")

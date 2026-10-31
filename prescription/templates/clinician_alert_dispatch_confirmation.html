@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smile Clinic — Prescriber Consultation Dispatch Confirmation</title>
+  <style>
+    @media only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; padding: 12px !important; }
+      .header-cell { padding: 20px 20px !important; }
+      .content-cell { padding: 24px 20px !important; }
+      .drug-pair-cell { display: block !important; width: 100% !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #181c1e;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f1f5f9; padding: 40px 10px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card -->
+        <table role="presentation" class="email-container" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 92, 101, 0.08), 0 8px 10px -6px rgba(0, 92, 101, 0.04); border: 1px solid #e2e8f0;">
+          
+          <!-- Top Accent Bar: Emerald / Teal indicating successful dispatch -->
+          <tr>
+            <td style="height: 5px; background: linear-gradient(90deg, #059669 0%, #005c65 100%); line-height: 5px; font-size: 5px;">&nbsp;</td>
+          </tr>
+
+          <!-- Header -->
+          <tr>
+            <td class="header-cell" style="padding: 26px 36px; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td width="46" valign="middle">
+                    <div style="width: 44px; height: 44px; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; text-align: center; line-height: 44px; overflow: hidden;">
+                      <span style="font-size: 24px; color: #059669; line-height: 44px; display: block;">✓</span>
+                    </div>
+                  </td>
+                  <td style="padding-left: 14px;" valign="middle">
+                    <span style="font-size: 19px; font-weight: 800; color: #005c65; letter-spacing: -0.3px; display: block; line-height: 1.2;">Smile Clinic</span>
+                    <span style="font-size: 11px; font-weight: 700; color: #059669; text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-top: 2px;">Prescription Alert Dispatched Successfully</span>
+                  </td>
+                  <td align="right" valign="middle">
+                    <span style="display: inline-block; background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
+                      SENT TO DOCTOR
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td class="content-cell" style="padding: 36px 36px 28px 36px;">
+              <h2 style="margin: 0 0 10px 0; font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.2px;">Clinical Directive Dispatch Confirmation</h2>
+              <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+                Hello <strong>{{ clinician_name }}</strong>,
+              </p>
+              <p style="margin: 0 0 20px 0; font-size: 13.5px; line-height: 1.6; color: #475569;">
+                This confirms that your prescription interaction consultation alert and clinical directive for Patient <strong>{{ patient_name }} (MRN: {{ patient_mrn }})</strong> have been successfully delivered to the prescribing physician:
+              </p>
+
+              <!-- Recipient Doctor Box -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f0fdfa; border: 1.5px solid #005c65; border-radius: 12px; padding: 16px 20px; margin-bottom: 22px;">
+                <tr>
+                  <td>
+                    <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #005c65; letter-spacing: 0.5px;">Consulting Prescriber Recipient</span>
+                    <p style="margin: 6px 0 0; font-size: 15px; font-weight: 700; color: #0f172a;">
+                      Dr. {{ doctor_name }} &lt;{{ doctor_email }}&gt;
+                    </p>
+                    <p style="margin: 4px 0 0; font-size: 12px; color: #475569;">
+                      Check Identifier: #<strong>{{ check_number }}</strong> • Severity: <strong style="color: #c2410c;">{{ severity_level }}</strong>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Drug Interaction Box -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 18px 20px; margin-bottom: 22px;">
+                <tr>
+                  <td class="drug-pair-cell" width="45%" valign="top">
+                    <span style="font-size: 10.5px; text-transform: uppercase; color: #9a3412; font-weight: 700; letter-spacing: 0.5px;">Prescribed Agent</span><br>
+                    <strong style="font-size: 15px; color: #7c2d12;">{{ proposed_drug }}</strong>
+                  </td>
+                  <td class="drug-pair-cell" width="10%" align="center" valign="middle" style="font-size: 22px; color: #ea580c; font-weight: bold;">
+                    ⚡
+                  </td>
+                  <td class="drug-pair-cell" width="45%" valign="top">
+                    <span style="font-size: 10.5px; text-transform: uppercase; color: #9a3412; font-weight: 700; letter-spacing: 0.5px;">Interacting Agent</span><br>
+                    <strong style="font-size: 15px; color: #7c2d12;">{{ conflict_agent }}</strong>
+                  </td>
+                </tr>
+              </table>
+
+              {% if substituted_medication %}
+              <!-- Proposed Safer Alternative -->
+              <div style="background-color: #ecfdf5; border-left: 4px solid #059669; padding: 14px 18px; margin-bottom: 22px; border-radius: 0 8px 8px 0;">
+                <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #047857; letter-spacing: 0.5px;">Requested Regimen Modification</span>
+                <p style="margin: 6px 0 0; font-size: 14px; font-weight: 700; color: #065f46; line-height: 1.5;">
+                  {{ substituted_medication }}
+                </p>
+              </div>
+              {% endif %}
+
+              <!-- Clinical Directive Memorandum Sent -->
+              <div style="background-color: #f8fafc; border-left: 4px solid #005c65; padding: 14px 18px; margin-bottom: 22px; border-radius: 0 8px 8px 0;">
+                <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #005c65; letter-spacing: 0.5px;">Dispatched Consultation Directive Copy</span>
+                <p style="margin: 6px 0 0; font-size: 12.5px; color: #334155; line-height: 1.6; white-space: pre-wrap;">{{ clinical_notes }}</p>
+              </div>
+
+              <!-- Clinician Follow-Up Contact Included in Doctor's Email -->
+              <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px 18px; margin-bottom: 22px;">
+                <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #334155; letter-spacing: 0.5px;">📞 Your Follow-Up Details Shared with Doctor</span>
+                <p style="margin: 6px 0 0; font-size: 12.5px; color: #475569; line-height: 1.6;">
+                  <strong>Attending Clinician:</strong> {{ clinician_name }}<br>
+                  {% if clinician_phone %}
+                  <strong>Telephone Contact:</strong> {{ clinician_phone }}<br>
+                  {% endif %}
+                  <strong>Email:</strong> {{ clinician_email }}
+                </p>
+              </div>
+
+              <!-- Certified Attachments Notice -->
+              <div style="background-color: #f0fdfa; border: 1px dashed #005c65; border-radius: 10px; padding: 14px 18px; margin-bottom: 24px;">
+                <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #005c65; letter-spacing: 0.5px;">📎 Attached Clinical Dossier (Full Copy Attached to This Email)</span>
+                <p style="margin: 6px 0 0; font-size: 12px; color: #115e59; line-height: 1.5;">
+                  A full copy of the 2-page CDS Verification Report and prescription slip is attached to this email. You can also view it online anytime:
+                </p>
+                <div style="margin-top: 10px; text-align: center;">
+                  <a href="{{ pdf_url }}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #005c65; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 700; padding: 10px 22px; border-radius: 8px;">
+                    📄 Open Certified Clinical Dossier (PDF) &rarr;
+                  </a>
+                </div>
+              </div>
+
+              <!-- Audit Stamp -->
+              <div style="padding: 12px 14px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; font-size: 11px; color: #64748b; line-height: 1.5;">
+                <strong>HIPAA Audit Timestamp:</strong> Recorded in PostgreSQL Database<br>
+                <strong>Security Seal:</strong> <span style="font-family: monospace;">{{ notary_hash }}</span>
+              </div>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 36px; text-align: center;">
+              <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 700; color: #475569;">
+                Smile Clinic Clinical Decision Support System
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #94a3b8; line-height: 1.4;">
+                This dispatch confirmation was automatically generated for your clinical audit records.<br>
+                Support Desk: <a href="mailto:support.smileclinic@gmail.com" style="color: #007782; text-decoration: underline;">support.smileclinic@gmail.com</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+
