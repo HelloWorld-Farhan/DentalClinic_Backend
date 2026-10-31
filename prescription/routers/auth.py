@@ -2826,7 +2826,7 @@ def send_doctor_consult_email(req: DoctorConsultEmailRequest, db: Session = Depe
     }
     
     subject = f"Smile Clinic CDS Alert: Prescription Interaction Consultation for {req.patient_name} [{req.severity.upper()}]"
-    cc_user = req.clinician_email if (req.clinician_email and req.clinician_email.strip().lower() != req.to_doctor_email.strip().lower() and '@' in req.clinician_email) else None
+    cc_user = req.cc_user_email if (req.cc_user_email and req.cc_user_email.strip().lower() != req.to_doctor_email.strip().lower() and '@' in req.cc_user_email) else None
     delivered = send_transactional_email(req.to_doctor_email, subject, 'doctor_medication_change_alert.html', context, cc=cc_user)
     
     # Immutable audit logging into PostgreSQL database

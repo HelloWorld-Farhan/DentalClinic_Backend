@@ -491,6 +491,7 @@ class DoctorConsultEmailRequest(BaseModel):
     rationale: str
     clinician_name: Optional[str] = 'Smile Clinic Prescriber'
     clinician_email: Optional[str] = ''
+    cc_user_email: Optional[str] = None
     notary_hash: Optional[str] = None
     portal_url: Optional[str] = 'https://prescription-dentalclinic.pages.dev/alerts'
 
