@@ -20,17 +20,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID")
-R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID")
-R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY")
-R2_BUCKET_NAME = os.getenv("R2_BUCKET_NAME", "dental-clinic-records")
-R2_PUBLIC_URL = os.getenv("R2_PUBLIC_URL", "https://pub-e6b50314f766405596ea974a88ed73cd.r2.dev").rstrip("/")
+R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID") or "f0aefe721667f2055f6a14b864d43a1d"
+R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID") or "66d85be1930c9b362b831234b0efdc74"
+R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY") or "d1ce125bffd95f46205a9cb09a5cc55bc256815b4aef10221e39aca6f0fdc715"
+R2_BUCKET_NAME = os.getenv("R2_BUCKET_NAME") or "dental-clinic-records"
+R2_PUBLIC_URL = (os.getenv("R2_PUBLIC_URL") or "https://pub-e6b50314f766405596ea974a88ed73cd.r2.dev").rstrip("/")
 
 def get_r2_client():
-    account_id = os.getenv("R2_ACCOUNT_ID")
-    access_key = os.getenv("R2_ACCESS_KEY_ID")
-    secret_key = os.getenv("R2_SECRET_ACCESS_KEY")
-    bucket = os.getenv("R2_BUCKET_NAME", "dental-clinic-records")
+    account_id = os.getenv("R2_ACCOUNT_ID") or R2_ACCOUNT_ID
+    access_key = os.getenv("R2_ACCESS_KEY_ID") or R2_ACCESS_KEY_ID
+    secret_key = os.getenv("R2_SECRET_ACCESS_KEY") or R2_SECRET_ACCESS_KEY
+    bucket = os.getenv("R2_BUCKET_NAME") or R2_BUCKET_NAME
     if not (account_id and access_key and secret_key):
         return None
     try:

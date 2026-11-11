@@ -79,6 +79,6 @@ def health_check():
     return {
         "status": "healthy",
         "service": "SmileClinic-PrescriptionBackend",
-        "version": "1.0.1",
+        "version": "1.0.2",
         "storage": "persistent-sqlite"
     }

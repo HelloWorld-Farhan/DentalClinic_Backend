@@ -5,12 +5,12 @@ from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/api/storage", tags=["Storage"])
 
-# Load R2 configuration from environment
-R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID")
-R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID")
-R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY")
-R2_BUCKET_NAME = os.getenv("R2_BUCKET_NAME", "dental-clinic-records")
-R2_PUBLIC_URL = os.getenv("R2_PUBLIC_URL", "https://pub-e6b50314f766405596ea974a88ed73cd.r2.dev").rstrip("/")
+# Load R2 configuration from environment with defaults
+R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID") or "f0aefe721667f2055f6a14b864d43a1d"
+R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID") or "66d85be1930c9b362b831234b0efdc74"
+R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY") or "d1ce125bffd95f46205a9cb09a5cc55bc256815b4aef10221e39aca6f0fdc715"
+R2_BUCKET_NAME = os.getenv("R2_BUCKET_NAME") or "dental-clinic-records"
+R2_PUBLIC_URL = (os.getenv("R2_PUBLIC_URL") or "https://pub-e6b50314f766405596ea974a88ed73cd.r2.dev").rstrip("/")
 
 def get_s3_client():
     if not (R2_ACCOUNT_ID and R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY):
