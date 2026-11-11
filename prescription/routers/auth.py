@@ -766,76 +766,41 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
             db.commit()
         else:
             user.last_failed_attempt = now
-
             user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
 
-
-
             if user.failed_login_attempts < 3:
-
                 remaining = 3 - user.failed_login_attempts
-
+                db.commit()
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=f"Incorrect password. {remaining} attempt{'s' if remaining > 1 else ''} remaining."
+                )
+            else:
+                # 3rd failure: lock account and auto-dispatch OTP via password_reset_otp.html
+                user.failed_login_attempts = 3
+                user.locked_until = now + timedelta(days=365)
+                otp_code = generate_numeric_otp(6)
+                expires_at = now + timedelta(minutes=10)
+                db.query(AuthOtp).filter(AuthOtp.email == email_clean).delete()
+                db.add(AuthOtp(email=email_clean, otp_code=otp_code, expires_at=expires_at))
                 db.commit()
 
-                raise HTTPException(
-
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-
-                    detail=f"Incorrect password. {remaining} attempt{'s' if remaining > 1 else ''} remaining."
-
+                send_template_email(
+                    to_email=email_clean,
+                    subject=f"Smile Clinic Security Alert — Account Locked: Reset Code {otp_code}",
+                    template_name="password_reset_otp.html",
+                    context={
+                        "clinician_name": user.full_name,
+                        "clinician_email": user.email,
+                        "reset_code": otp_code,
+                        "expires_in_minutes": 10
+                    }
                 )
 
-        else:
-
-            # 3rd failure: lock account and auto-dispatch OTP via password_reset_otp.html
-
-            user.failed_login_attempts = 3
-
-            user.locked_until = now + timedelta(days=365)
-
-            otp_code = generate_numeric_otp(6)
-
-            expires_at = now + timedelta(minutes=10)
-
-            db.query(AuthOtp).filter(AuthOtp.email == email_clean).delete()
-
-            db.add(AuthOtp(email=email_clean, otp_code=otp_code, expires_at=expires_at))
-
-            db.commit()
-
-
-
-            send_template_email(
-
-                to_email=email_clean,
-
-                subject=f"Smile Clinic Security Alert — Account Locked: Reset Code {otp_code}",
-
-                template_name="password_reset_otp.html",
-
-                context={
-
-                    "clinician_name": user.full_name,
-
-                    "clinician_email": user.email,
-
-                    "reset_code": otp_code,
-
-                    "expires_in_minutes": 10
-
-                }
-
-            )
-
-
-
-            raise HTTPException(
-
-                status_code=status.HTTP_403_FORBIDDEN,
-
-                detail="Account locked due to 3 failed login attempts. A verification code has been dispatched to your email to verify your identity and reset your password."
-
-            )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Account locked due to 3 failed login attempts. A verification code has been dispatched to your email to verify your identity and reset your password."
+                )
 
 
 
