@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 # Load environment secrets
 env_file = Path(__file__).resolve().parent / ".env"
@@ -75,9 +76,15 @@ def ensure_schema_compatibility(target_engine):
                 if "is_google_linked" not in columns:
                     conn.execute(text("ALTER TABLE users ADD COLUMN is_google_linked BOOLEAN DEFAULT FALSE"))
                 if "license_number" in columns:
-                    conn.execute(text("ALTER TABLE users DROP COLUMN license_number"))
+                    try:
+                        conn.execute(text("ALTER TABLE users DROP COLUMN license_number"))
+                    except Exception:
+                        pass
                 if "clinic_id" in columns:
-                    conn.execute(text("ALTER TABLE users DROP COLUMN clinic_id"))
+                    try:
+                        conn.execute(text("ALTER TABLE users DROP COLUMN clinic_id"))
+                    except Exception:
+                        pass
                 conn.commit()
 
         if "prescription_checks" in inspector.get_table_names():
@@ -108,22 +115,46 @@ def ensure_schema_compatibility(target_engine):
 
 def init_db():
     global engine, SessionLocal
-    if DATABASE_URL:
+    # 1. Attempt PostgreSQL if DATABASE_URL is valid and not pointing to the dead Supabase project
+    is_dead_supabase = "eikncobxyhvpnoondfqk" in DATABASE_URL
+    if DATABASE_URL and not is_dead_supabase:
         try:
-            test_engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=300)
+            test_engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=300, connect_args={"connect_timeout": 5})
             with test_engine.connect():
                 pass
             engine = test_engine
             SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
             ensure_schema_compatibility(engine)
-            print("[Database] Successfully connected to Supabase PostgreSQL.")
+            print("[Database] Successfully connected to PostgreSQL.")
             return
         except Exception as e:
-            print(f"[Database Warning] Database connection error: {e}")
+            print(f"[Database Warning] PostgreSQL connection error: {e}")
 
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    # 2. Use persistent SQLite database file located in the application root directory
+    db_file = Path(__file__).resolve().parent.parent / "prescription_clinic.db"
+    try:
+        engine = create_engine(
+            f"sqlite:///{db_file.resolve().as_posix()}",
+            connect_args={"check_same_thread": False}
+        )
+        with engine.connect():
+            pass
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        ensure_schema_compatibility(engine)
+        print(f"[Database] Successfully initialized persistent SQLite at {db_file}")
+        return
+    except Exception as e:
+        print(f"[Database Warning] Persistent SQLite file error: {e}")
+
+    # 3. Memory fallback with StaticPool so all threads share the exact same schema and data
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
+    )
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     ensure_schema_compatibility(engine)
+    print("[Database] Initialized shared in-memory SQLite with StaticPool.")
 
 init_db()
 
