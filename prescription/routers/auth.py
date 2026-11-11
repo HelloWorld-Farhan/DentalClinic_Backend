@@ -246,6 +246,10 @@ def add_user_remembered_device(user: User, device_id: Optional[str]) -> None:
 
 
 
+remember_device_id = add_user_remembered_device
+
+
+
 def remove_user_remembered_device(user: User, device_id: Optional[str]) -> None:
 
     """Removes a device ID from user's remembered devices list."""
@@ -858,7 +862,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 
     # When Remember Device is checked on this workstation, remember device ID automatically
     if payload.remember_device and payload.device_id and not device_recognized:
-        remember_device_id(user, payload.device_id)
+        add_user_remembered_device(user, payload.device_id)
         db.commit()
         device_recognized = True
 
