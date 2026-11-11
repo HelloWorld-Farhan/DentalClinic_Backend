@@ -15,6 +15,7 @@ from ..models import (
     UserCustomQuestion,
     UserNotificationState,
 )
+from ..r2_sync import reconcile_user_data_from_r2, sync_db_state_to_r2
 
 router = APIRouter(prefix="/api/v1/sync", tags=["Cross-Device Sync"])
 
@@ -45,6 +46,14 @@ def get_all_user_data(
     Called when logging into any device to immediately hydrate client state.
     """
     norm_email = clean_email(email)
+
+    # Automatic R2 cloud reconciliation if local database is empty or missing historical checks
+    existing_count = db.query(PrescriptionCheck).filter(PrescriptionCheck.user_email == norm_email).count()
+    if existing_count == 0:
+        try:
+            reconcile_user_data_from_r2(norm_email, db)
+        except Exception as e:
+            print(f"[Sync Warning] R2 auto-reconciliation error: {e}")
 
     checks = (
         db.query(PrescriptionCheck)
@@ -435,6 +444,7 @@ def batch_push_user_data(
             flag_modified(notif_state, "synced_knowledge")
 
     db.commit()
+    sync_db_state_to_r2(norm_email, db)
     return {"status": "success", "message": "Batch synced successfully to Supabase cloud"}
 
 # ==========================================
@@ -498,6 +508,7 @@ def save_single_check(payload: Dict[str, Any] = Body(...), db: Session = Depends
         db.add(existing)
 
     db.commit()
+    sync_db_state_to_r2(norm_email, db)
     return {"status": "success", "id": cid}
 
 @router.delete("/check/{check_id}")
@@ -509,6 +520,7 @@ def delete_single_check(check_id: str, email: str = Query(..., description="Clin
     if chk:
         db.delete(chk)
         db.commit()
+        sync_db_state_to_r2(norm_email, db)
         return {"status": "success", "deletedId": check_id}
     return {"status": "not_found", "message": f"Check {check_id} not found"}
 
@@ -518,6 +530,7 @@ def clear_all_checks_and_audits(email: str = Query(..., description="Clinician e
     del_checks = db.query(PrescriptionCheck).filter(PrescriptionCheck.user_email == norm_email).delete()
     del_audits = db.query(AuditLog).filter(AuditLog.user_email == norm_email).delete()
     db.commit()
+    sync_db_state_to_r2(norm_email, db)
     return {"status": "success", "deletedChecks": del_checks, "deletedAudits": del_audits}
 
 @router.delete("/audit-log/{log_id}")
@@ -529,6 +542,8 @@ def delete_single_audit_log(log_id: str, email: str = Query(..., description="Cl
     if log:
         db.delete(log)
         db.commit()
+        sync_db_state_to_r2(norm_email, db)
+        return {"status": "success", "deletedId": log_id}
         return {"status": "success", "deletedId": log_id}
     return {"status": "not_found", "message": f"Audit log {log_id} not found"}
 
@@ -559,6 +574,7 @@ def save_single_audit_log(payload: Dict[str, Any] = Body(...), db: Session = Dep
             )
         )
         db.commit()
+        sync_db_state_to_r2(norm_email, db)
 
     return {"status": "success", "id": aid}
 
@@ -587,6 +603,7 @@ def save_single_document(payload: Dict[str, Any] = Body(...), db: Session = Depe
             )
         )
         db.commit()
+        sync_db_state_to_r2(norm_email, db)
 
     return {"status": "success", "id": did}
 
@@ -601,6 +618,7 @@ def delete_single_document(
     if doc:
         db.delete(doc)
         db.commit()
+        sync_db_state_to_r2(norm_email, db)
     return {"status": "success", "deletedId": doc_id}
 
 @router.post("/rule")
