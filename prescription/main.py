@@ -26,7 +26,7 @@ except Exception as e:
 app = FastAPI(
     title="Smile Clinic - Prescription Service API",
     description="Dedicated microservice for Smile Clinic clinician authentication and prescription safety workflows.",
-    version="1.0.0"
+    version="1.0.1"
 )
 
 FRONTEND_URL = os.getenv("FRONTEND_URL")
@@ -79,5 +79,6 @@ def health_check():
     return {
         "status": "healthy",
         "service": "SmileClinic-PrescriptionBackend",
-        "version": "1.0.0"
+        "version": "1.0.1",
+        "storage": "persistent-sqlite"
     }
